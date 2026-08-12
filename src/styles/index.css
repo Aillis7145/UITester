@@ -1,0 +1,16 @@
+/* ลำดับการ import สำคัญ: tailwind → tokens → motion → themes → recipes → lab
+   themes ต้องมาหลัง tokens เพื่อ override ได้ / recipes ต้องมาท้ายสุดเพราะบริโภคทั้งหมด */
+@import 'tailwindcss';
+
+@import './tokens.css';
+@import './motion.css';
+
+@import './themes/tech.css';
+@import './themes/school.css';
+@import './themes/neu.css';
+@import './themes/edura.css';
+@import './themes/skooldio.css';
+
+@import './recipes.css';
+@import './studio.css';
+@import './lab.css';

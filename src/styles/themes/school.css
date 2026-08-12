@@ -1,0 +1,62 @@
+/* ============================================================
+   THEME: SCHOOL — Friendly Bright
+   สีสว่าง มุมโค้งมน เงาแข็งแบบสติกเกอร์ ปุ่มเด้งเวลา hover
+   ============================================================ */
+
+[data-theme='school'] {
+  color-scheme: light;
+
+  --color-bg: oklch(97% 0.03 80); /* ครีมอุ่น */
+  --color-surface: oklch(100% 0 0);
+  /* เส้นขอบและพื้นผิวย่อยเป็นโทนส้มอ่อน ให้เข้าชุดกับคอรัลและพื้นครีม
+     (เดิมเป็นโทนฟ้า ซึ่งตัดกับพื้นอุ่นจนดูเป็นคนละธีม) */
+  --color-surface-2: oklch(96% 0.035 62);
+  --color-border: oklch(89% 0.055 58);
+  --color-text: oklch(32% 0.055 50);
+  --color-muted: oklch(50% 0.04 50);
+
+  /* ค่าความสว่างของสามตัวนี้ถูกกดลงจนผ่าน WCAG AA บนพื้นครีม
+     (ดู npm run audit:contrast) — คอรัลสว่างกว่านี้ตัวหนังสือขาวจะอ่านไม่ออก */
+  --color-primary: oklch(56% 0.19 25); /* คอรัลเข้ม */
+  --color-on-primary: oklch(99% 0 0);
+  --color-primary-ink: oklch(45% 0.16 25); /* คอรัลเข้มพอเป็นตัวหนังสือบนพื้นครีม */
+  --color-accent: oklch(72% 0.14 190); /* มินต์ */
+
+  --color-success: oklch(56% 0.16 145);
+  --color-warn: oklch(56% 0.14 75);
+  --color-danger: oklch(54% 0.2 25);
+
+  /* พื้นครีมกับการ์ดขาวต่างกันนิดเดียว เนื้อหาจึงใช้ค่าเดียวกันทั้งสองที่ */
+  --ui-on-surface: oklch(32% 0.055 50);
+  --ui-on-surface-muted: oklch(50% 0.04 50);
+  --ui-on-surface-primary: oklch(45% 0.16 25);
+
+  /* ลำดับความมนของทั้งโปรเจค: edura 0.25 → tech 0.5 → skooldio 0.75 → school 1.25 → neu 1.5 */
+  --radius-ui: 1.25rem;
+  --radius-card: 2rem;
+
+  /* Sarabun = ฟอนต์ไทยมีหัว อ่านง่าย เป็นทางการพอที่ครูใช้ได้ไม่เขิน
+     Kodchasan = มีหัวเหมือนกันแต่มนกว่า เก็บความเป็นมิตรไว้ที่หัวข้อ
+     (เดิมใช้ Mali ทั้งหมด ซึ่งเป็นลายมือเด็ก จึงดูเด็กเกินไปทั้งหน้า) */
+  --font-sans: 'Sarabun', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Kodchasan', 'Sarabun', ui-sans-serif, sans-serif;
+
+  /* เงาแข็งแบบสติกเกอร์ — กดแล้วยุบ */
+  --shadow-raised: 0 4px 0 oklch(70% 0.09 25 / 0.3), 0 10px 24px oklch(70% 0.09 25 / 0.16);
+  --shadow-pressed: 0 1px 0 oklch(70% 0.09 25 / 0.34);
+  --shadow-glow: 0 4px 0 oklch(70% 0.09 25 / 0.3), 0 0 0 4px oklch(72% 0.14 190 / 0.32);
+
+  --ui-backdrop: none;
+  --ui-border-width: 2px;
+  --ui-card-bg: var(--color-surface);
+  --ui-field-bg: oklch(98% 0.018 62);
+  --ui-field-border: oklch(86% 0.06 58);
+  --ui-hover-lift: -3px; /* เด้งสูงกว่าธีมอื่น */
+  --ui-hover-shadow: 0 7px 0 oklch(70% 0.09 25 / 0.3), 0 14px 28px oklch(70% 0.09 25 / 0.2);
+  --ui-press-scale: 0.97;
+  --ui-focus-ring: 0 0 0 4px oklch(72% 0.14 190 / 0.45);
+  --ui-heading-weight: 700;
+  --ui-tracking: 0em;
+  --ui-overlay: oklch(45% 0.08 265 / 0.4);
+  --ui-overlay-blur: blur(3px);
+}

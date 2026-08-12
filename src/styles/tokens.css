@@ -1,0 +1,86 @@
+/* ============================================================
+   TOKEN CONTRACT
+   ------------------------------------------------------------
+   ทุกธีมต้อง "ตอบ" token ทุกตัวในไฟล์นี้
+   ชื่อต้องเป็น semantic เสมอ (--color-primary) ห้ามเป็นชื่อสีจริง (--color-cyan-400)
+
+   หมายเหตุสำคัญ: ห้ามใช้ `@theme inline` เด็ดขาด
+   เพราะจะฝังค่าจริงลงใน utility ทำให้ override ตอน runtime ไม่ทำงาน
+   ============================================================ */
+
+@theme {
+  /* ---------- surface & text ---------- */
+  --color-bg: oklch(98% 0.01 250);
+  --color-surface: oklch(100% 0 0);
+  --color-surface-2: oklch(96% 0.02 250);
+  --color-border: oklch(90% 0.02 250);
+  --color-text: oklch(25% 0.02 250);
+  --color-muted: oklch(50% 0.02 250);
+
+  /* ---------- brand ---------- */
+  --color-primary: oklch(60% 0.18 265); /* ใช้เป็น "พื้น" ของปุ่ม แถบ ป้าย */
+  --color-on-primary: oklch(99% 0 0);
+  /* ใช้เป็น "ตัวหนังสือ/ไอคอนสีแบรนด์" บนพื้นหลัง
+     ธีมที่สีแบรนด์สว่าง (เช่น อำพันของ skooldio) ต้องตั้งตัวนี้ให้เข้มขึ้น
+     ไม่งั้นลิงก์กับตัวเลขเปอร์เซ็นต์จะอ่านไม่ออกบนพื้นขาว
+     ธีมที่สีแบรนด์เข้มพออยู่แล้วปล่อยให้ใช้ค่ากลางนี้ได้เลย */
+  --color-primary-ink: var(--color-primary);
+  --color-accent: oklch(70% 0.19 200);
+
+  /* ---------- semantic state ---------- */
+  --color-success: oklch(65% 0.17 150);
+  --color-warn: oklch(72% 0.16 85);
+  --color-danger: oklch(58% 0.2 25);
+
+  /* ---------- shape ---------- */
+  --radius-ui: 0.75rem; /* ปุ่ม ช่องกรอก chip  -> rounded-ui   */
+  --radius-card: 1rem; /* การ์ด แผง modal    -> rounded-card */
+
+  /* ---------- type ---------- */
+  --font-sans: 'Prompt', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Prompt', ui-sans-serif, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* ---------- elevation: สัญญา 3 สถานะที่ทุกธีมต้องตอบ ---------- */
+  --shadow-raised: 0 1px 2px oklch(0% 0 0 / 0.06), 0 8px 24px oklch(0% 0 0 / 0.08);
+  --shadow-pressed: inset 0 2px 6px oklch(0% 0 0 / 0.12);
+  --shadow-glow: 0 0 0 transparent;
+}
+
+/* ------------------------------------------------------------
+   token ที่ไม่มี namespace ของ Tailwind — ใช้โดย recipes.css เท่านั้น
+   ------------------------------------------------------------ */
+:root {
+  /* ---------- สีของเนื้อหาที่อยู่ "บนพื้นผิว" ----------
+     จำเป็นเพราะมีดีไซน์ที่พื้นหน้าเข้มแต่การ์ดเป็นสีขาว (เช่นธีม edura)
+     กรณีนั้น --color-text ตัวเดียวใช้ไม่ได้ ต้องขาวบนพื้น แต่ต้องเข้มบนการ์ด
+
+     .ui-surface / .ui-panel / .ui-inset จะเอาสามตัวนี้ไปทับ --color-text /
+     --color-muted / --color-primary-ink ให้ลูกหลานทั้งหมด utility เดิมจึงใช้ได้เลย
+     ไม่ต้องแก้คอมโพเนนต์สักตัว
+
+     ต้องเป็นค่าจริง ห้ามเขียนเป็น var(--color-text) เพราะจะกลายเป็นการอ้างวนแล้วพังทั้งชุด
+     ธีมที่พื้นกับการ์ดโทนเดียวกันก็แค่ใส่ค่าเดียวกันซ้ำ — audit:tokens บังคับให้ตอบทุกธีม */
+  --ui-on-surface: oklch(25% 0.02 250);
+  --ui-on-surface-muted: oklch(50% 0.02 250);
+  --ui-on-surface-primary: oklch(60% 0.18 265);
+
+  --ui-backdrop: none; /* backdrop-filter; `none` ไม่สร้าง stacking context */
+  --ui-border-width: 1px;
+  --ui-card-bg: var(--color-surface);
+  /* พื้นผิวย่อย (.ui-panel) แยกตัวจากพื้นหลังยังไง
+     ธีมที่มีเส้นขอบใช้ขอบก็พอ แต่ธีมที่ไม่มีขอบ (neu) ต้องตอบด้วยเงา
+     ไม่งั้นปุ่มรองกับตัวเลือกข้อสอบจะหายไปกับพื้นหลังสนิท */
+  --ui-panel-shadow: none;
+  --ui-field-bg: var(--color-surface-2);
+  --ui-field-shadow: none;
+  --ui-field-border: var(--color-border);
+  --ui-hover-lift: -1px;
+  --ui-hover-shadow: var(--shadow-raised);
+  --ui-press-scale: 0.985;
+  --ui-focus-ring: 0 0 0 3px color-mix(in oklch, var(--color-primary) 35%, transparent);
+  --ui-heading-weight: 700;
+  --ui-tracking: 0em;
+  --ui-overlay: oklch(15% 0.02 265 / 0.55); /* ฉากหลัง modal */
+  --ui-overlay-blur: blur(2px);
+}

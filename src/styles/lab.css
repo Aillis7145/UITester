@@ -1,0 +1,35 @@
+/* ============================================================
+   LAB
+   ------------------------------------------------------------
+   สไตล์เฉพาะของ Component Lab
+   CSS ของแต่ละ variant ไม่ได้อยู่ที่นี่ — มันอยู่ในไฟล์ variant เอง
+   แล้ว LabPage รวมยิงเข้า <style> ก้อนเดียว (ดู lab/registry.js)
+   ============================================================ */
+
+/* ฉากพรีวิว — สลับพื้นหลังโปร่ง/ทึบเพื่อดูเงาและขอบได้ชัด */
+.preview-stage {
+  display: grid;
+  place-items: center;
+  min-height: 8.5rem;
+  padding: 1.5rem;
+  border-radius: var(--radius-card);
+}
+.preview-stage[data-bg='checker'] {
+  background-image:
+    linear-gradient(45deg, oklch(50% 0 0 / 0.14) 25%, transparent 25%),
+    linear-gradient(-45deg, oklch(50% 0 0 / 0.14) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, oklch(50% 0 0 / 0.14) 75%),
+    linear-gradient(-45deg, transparent 75%, oklch(50% 0 0 / 0.14) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+
+/* บล็อกโค้ด */
+.code-block {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  tab-size: 2;
+  white-space: pre;
+  overflow-x: auto;
+}

@@ -1,0 +1,163 @@
+/* ============================================================
+   RECIPES (Layer B)
+   ------------------------------------------------------------
+   CSS โครงสร้างที่ขับด้วย token ทั้งหมด
+   คอมโพเนนต์ใช้คลาสพวกนี้ + utility ของ Tailwind แล้วได้หน้าตาตามธีมเอง
+   ============================================================ */
+
+@layer components {
+  /* ทับ token ของ "เนื้อหา" ให้ทุกอย่างที่อยู่ในพื้นผิว
+     เพราะ utility ของ Tailwind อ้าง var() อยู่แล้ว การเปลี่ยนค่าตัวแปรตรงนี้
+     จึงไหลไปถึงลูกหลานทุกตัวโดยไม่ต้องแตะคอมโพเนนต์เลยแม้แต่ตัวเดียว */
+  .ui-surface,
+  .ui-panel,
+  .ui-inset,
+  .ui-menu {
+    --color-text: var(--ui-on-surface);
+    --color-muted: var(--ui-on-surface-muted);
+    --color-primary-ink: var(--ui-on-surface-primary);
+    color: var(--color-text);
+  }
+
+  /* ---------- พื้นผิว ---------- */
+  .ui-surface {
+    background: var(--ui-card-bg);
+    border: var(--ui-border-width) solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-raised);
+    -webkit-backdrop-filter: var(--ui-backdrop);
+    backdrop-filter: var(--ui-backdrop);
+  }
+
+  /* พื้นผิวย่อย เช่นแถวใน list — เบากว่า .ui-surface */
+  .ui-panel {
+    background: var(--ui-card-bg);
+    border: var(--ui-border-width) solid var(--color-border);
+    border-radius: var(--radius-ui);
+    box-shadow: var(--ui-panel-shadow);
+    -webkit-backdrop-filter: var(--ui-backdrop);
+    backdrop-filter: var(--ui-backdrop);
+  }
+
+  /* ช่องกรอก — neu ใช้เงา inset ธีมอื่นใช้เส้นขอบ */
+  .ui-inset {
+    background: var(--ui-field-bg);
+    border: var(--ui-border-width) solid var(--ui-field-border);
+    border-radius: var(--radius-ui);
+    box-shadow: var(--ui-field-shadow);
+  }
+
+  /* ---------- การโต้ตอบ ---------- */
+  .ui-interactive {
+    transition:
+      transform var(--dur-fast) var(--ease-smooth),
+      box-shadow var(--dur-fast) var(--ease-smooth),
+      background-color var(--dur-fast) var(--ease-smooth),
+      border-color var(--dur-fast) var(--ease-smooth),
+      color var(--dur-fast) var(--ease-smooth);
+  }
+  .ui-interactive:hover:not(:disabled):not([aria-disabled='true']) {
+    transform: translateY(var(--ui-hover-lift));
+    box-shadow: var(--ui-hover-shadow);
+  }
+  .ui-interactive:active:not(:disabled):not([aria-disabled='true']) {
+    transform: translateY(0) scale(var(--ui-press-scale));
+    box-shadow: var(--shadow-pressed);
+  }
+
+  .ui-focusable:focus-visible {
+    outline: none;
+    box-shadow: var(--ui-focus-ring), var(--shadow-raised);
+  }
+  /* ให้ focus ชนะ hover เสมอ ไม่งั้นวงแหวนหายตอนเมาส์ค้างอยู่ */
+  .ui-focusable:focus-visible:hover {
+    box-shadow: var(--ui-focus-ring), var(--ui-hover-shadow);
+  }
+
+  /* ---------- ตัวอักษร ---------- */
+  .ui-heading {
+    font-family: var(--font-display);
+    font-weight: var(--ui-heading-weight);
+    letter-spacing: var(--ui-tracking);
+    line-height: 1.35;
+  }
+
+  /* ---------- แผงลอย (dropdown / popover) ----------
+     ใช้ display + transition-behavior: allow-discrete + @starting-style
+     ทำให้ทั้งเข้าและออกเป็นอนิเมชั่นได้ด้วย CSS ล้วน โดยไม่ต้องมี JS จับเวลา */
+  .ui-menu {
+    display: block;
+    background: var(--ui-card-bg);
+    border: var(--ui-border-width) solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-raised);
+    -webkit-backdrop-filter: var(--ui-backdrop);
+    backdrop-filter: var(--ui-backdrop);
+
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+    transition:
+      opacity var(--dur-base) var(--ease-smooth),
+      translate var(--dur-base) var(--ease-smooth),
+      scale var(--dur-base) var(--ease-smooth),
+      display var(--dur-base) allow-discrete;
+  }
+  .ui-menu[data-open='false'] {
+    display: none;
+    opacity: 0;
+    translate: 0 -0.5rem;
+    scale: 0.97;
+  }
+  @starting-style {
+    .ui-menu[data-open='true'] {
+      opacity: 0;
+      translate: 0 -0.5rem;
+      scale: 0.97;
+    }
+  }
+
+  /* ---------- ฉากหลัง modal ---------- */
+  .ui-overlay {
+    background: var(--ui-overlay);
+    -webkit-backdrop-filter: var(--ui-overlay-blur);
+    backdrop-filter: var(--ui-overlay-blur);
+  }
+}
+
+/* ============================================================
+   ภาษาไทย
+   ------------------------------------------------------------
+   - วรรณยุกต์ซ้อนบน-ล่าง ต้องการ leading กว้างกว่าละติน ไม่งั้นโดนตัด
+   - ไทยไม่มีเว้นวรรคระหว่างคำ ข้อความยาวจึงไม่ตัดบรรทัดเอง
+   ============================================================ */
+:where([lang='th']) {
+  line-height: 1.75;
+}
+:where([lang='th']) .ui-heading {
+  line-height: 1.45;
+}
+body {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+/* ============================================================
+   base
+   ============================================================ */
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* scrollbar ที่ไม่ทะเลาะกับธีมมืด */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, currentColor 25%, transparent) transparent;
+}

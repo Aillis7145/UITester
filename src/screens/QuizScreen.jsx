@@ -1,0 +1,170 @@
+import { useMemo, useState } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
+import { useScreenState } from './screenState';
+import { useCountdown } from '@/hooks/useCountdown';
+import { quiz, submittedAnswers } from '@/mock/data';
+import { QuestionCard } from './parts/QuestionCard';
+import { QuestionNavigator } from './parts/QuestionNavigator';
+import { QuizTimer } from './parts/QuizTimer';
+import { Button } from '@/components/Button';
+import { Icon } from '@/components/Icon';
+import { Modal } from '@/components/Modal';
+import { ProgressBar } from '@/components/ProgressBar';
+import { cn } from '@/lib/cn';
+
+export function QuizScreen({ onNavigate }) {
+  const { t, p } = useI18n();
+  const { forceLoading } = useScreenState();
+
+  // เริ่มที่ข้อ 4 โดยตั้งใจ: ผังข้อสอบมีครบทั้ง 4 สถานะตั้งแต่เปิดหน้า
+  // และข้อนี้มีบล็อกโค้ด ซึ่งเป็นจุดที่ธีมต่างกันชัด (ฟอนต์ mono + พื้นผิว inset)
+  const [index, setIndex] = useState(3);
+  const [answers, setAnswers] = useState(() => ({
+    q1a: submittedAnswers.q1a,
+    q2a: submittedAnswers.q2a,
+    q3a: submittedAnswers.q3a,
+  }));
+  const [flagged, setFlagged] = useState(() => new Set(['q5a']));
+  const [confirming, setConfirming] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const { left } = useCountdown(quiz.timeLimitSec - 155);
+
+  const questions = quiz.questions;
+  const question = questions[index];
+  const answeredCount = useMemo(
+    () => questions.filter((q) => (answers[q.id] ?? []).length > 0).length,
+    [answers, questions],
+  );
+
+  const isLast = index === questions.length - 1;
+
+  const setAnswer = (ids) => setAnswers((prev) => ({ ...prev, [question.id]: ids }));
+
+  const toggleFlag = () =>
+    setFlagged((prev) => {
+      const next = new Set(prev);
+      if (next.has(question.id)) next.delete(question.id);
+      else next.add(question.id);
+      return next;
+    });
+
+  const go = (delta) => setIndex((i) => Math.min(questions.length - 1, Math.max(0, i + delta)));
+
+  const submit = () => {
+    setSubmitting(true);
+    setTimeout(() => {
+      setSubmitting(false);
+      setConfirming(false);
+      onNavigate?.('results');
+    }, 700);
+  };
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 pt-6 pb-24 sm:px-6 lg:px-8">
+      {/* ---------- แถบบน ---------- */}
+      <header className="ui-surface flex flex-wrap items-center gap-4 p-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="ui-heading truncate text-lg">{p(quiz.title)}</h1>
+          <p className="mt-0.5 text-sm text-muted">
+            {t('quiz.qOf', { n: index + 1, total: questions.length })}
+          </p>
+        </div>
+        <QuizTimer secondsLeft={left} />
+      </header>
+
+      <ProgressBar
+        value={(index + 1) / questions.length}
+        className="mt-3"
+        label={t('quiz.qOf', { n: index + 1, total: questions.length })}
+      />
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
+        {/* ---------- คำถาม ---------- */}
+        <div className="min-w-0">
+          <QuestionCard
+            key={question.id}
+            question={{ ...question, total: questions.length }}
+            index={index}
+            selected={answers[question.id] ?? []}
+            onToggle={setAnswer}
+          />
+
+          {/* ---------- แถบล่าง ---------- */}
+          <div className="mt-5 flex flex-wrap items-center gap-2.5">
+            <Button variant="ghost" icon="arrowLeft" disabled={index === 0} onClick={() => go(-1)}>
+              {t('common.prev')}
+            </Button>
+
+            <button
+              type="button"
+              onClick={toggleFlag}
+              aria-pressed={flagged.has(question.id)}
+              className={cn(
+                'ui-interactive ui-focusable inline-flex items-center gap-1.5 rounded-ui px-3 py-2.5 text-sm font-medium',
+                flagged.has(question.id) ? 'text-warn' : 'text-muted hover:text-text',
+              )}
+              style={flagged.has(question.id) ? { color: 'var(--color-warn)' } : undefined}
+            >
+              <Icon name="flag" size={16} />
+              {flagged.has(question.id) ? t('quiz.flagged') : t('quiz.flag')}
+            </button>
+
+            <div className="ml-auto flex items-center gap-2.5">
+              {!isLast && (
+                <Button variant="ghost" onClick={() => go(1)}>
+                  {t('quiz.skip')}
+                </Button>
+              )}
+              {isLast ? (
+                <Button icon="check" onClick={() => setConfirming(true)}>
+                  {t('common.submit')}
+                </Button>
+              ) : (
+                <Button iconRight="arrowRight" onClick={() => go(1)}>
+                  {t('common.next')}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ---------- ผังข้อสอบ ---------- */}
+        <aside className="min-w-0 lg:sticky lg:top-6 lg:self-start">
+          <QuestionNavigator
+            questions={questions}
+            answers={answers}
+            flagged={flagged}
+            current={index}
+            onJump={setIndex}
+          />
+        </aside>
+      </div>
+
+      {/* ---------- ยืนยันการส่ง ---------- */}
+      <Modal
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={t('quiz.confirmTitle')}
+        description={t('quiz.confirmBody', { answered: answeredCount, total: questions.length })}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirming(false)}>
+              {t('quiz.keepGoing')}
+            </Button>
+            <Button icon="check" loading={submitting || forceLoading} onClick={submit}>
+              {t('quiz.confirmSubmit')}
+            </Button>
+          </>
+        }
+      >
+        <ProgressBar
+          value={answeredCount / questions.length}
+          tone={answeredCount === questions.length ? 'success' : 'warn'}
+        />
+      </Modal>
+    </div>
+  );
+}
+
+export default QuizScreen;

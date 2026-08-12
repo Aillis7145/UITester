@@ -1,0 +1,461 @@
+# UITester — คลังดีไซน์ UI สำหรับแพลตฟอร์มการเรียนรู้
+
+เว็บโชว์รูปแบบ UI สำหรับโปรเจคการเรียนรู้ในอนาคต **หน้าจอหลัก 5 หน้า × 5 ธีม = 25 จอ**
+เทียบข้างกันได้ พร้อมคลังคอมโพเนนต์ที่คัดลอกโค้ดไปใช้ได้ทันที
+
+| ธีม | บุคลิก |
+|---|---|
+| `tech` | ดาร์กนีออน กระจกฝ้า พื้นหลังอนุภาค 3 มิติ |
+| `school` | สดใส เป็นมิตร ปุ่มสติกเกอร์ ขอบส้มอ่อน |
+| `neu` | นูมอร์ฟิซึม พื้นขาวมีม่วงแซม เงานูนไม่มีขอบ |
+| `edura` | **พื้นกรมท่าเข้มตัดการ์ดขาว** อำพันเป็นตัวเน้น มุมเกือบเหลี่ยม ไม่มีเส้นขอบ |
+| `skooldio` | **ขาวล้วน ฟ้านำ เขียวตาม** เส้นขอบคมแทนเงา ตัวหนังสือหนักมือ |
+
+ข้อมูลทั้งหมดเป็นข้อมูลจำลอง — ไม่มี backend ไม่มี auth จริง
+ภาพประกอบคอร์สเป็นภาพถ่ายจริงจาก Unsplash (ดู `public/mock/CREDITS.md`)
+
+---
+
+## เริ่มใช้งาน
+
+```bash
+npm install
+npm run dev          # http://localhost:5173
+```
+
+| คำสั่ง | ทำอะไร |
+|---|---|
+| `npm run dev` | เซิร์ฟเวอร์สำหรับพัฒนา |
+| `npm run build` | บิลด์ขึ้น production (`dist/`) |
+| `npm run preview` | ดูผลบิลด์จริง |
+| `npm run lint` | ตรวจโค้ดด้วย oxlint |
+| `npm run audit:tokens` | ตรวจว่าทุกธีมตอบสัญญา token ครบ |
+| `node scripts/fetch-images.mjs` | ดึงภาพประกอบจาก Unsplash ใหม่ (รันครั้งเดียวตอนตั้งโปรเจค ไฟล์อยู่ใน repo แล้ว) |
+| `npm run audit:contrast` | ตรวจ contrast ทุกธีมตามเกณฑ์ WCAG AA (ต้อง `npm run dev` ค้างไว้) |
+| `npm run verify` | ขับเบราว์เซอร์จริงตรวจ 15 จอ + การโต้ตอบ (ต้อง `npm run dev` ค้างไว้) |
+
+> `audit:contrast` วัดโดยวาดสีลง canvas เพื่อ rasterize เป็น sRGB จริง
+> เพราะ Chromium คืนค่า computed color เป็น `oklch()` ตามที่เขียนไว้ ไม่ได้แปลงเป็น `rgb()` ให้
+> การอ่านตัวเลขจาก `getComputedStyle` ตรงๆ จะได้ค่าที่ผิดสิ้นเชิง
+
+---
+
+## เส้นทางในเว็บ
+
+| URL | ทำอะไร |
+|---|---|
+| `/` | หน้าแรก — การ์ดธีม 3 ใบพร้อมพรีวิวสด |
+| `/showcase/:themeId/:pageId` | หน้าจอจำลอง 1 จอ ในกรอบเครื่อง พร้อมเครื่องมือสตูดิโอ · กด **ขยายตัวอย่าง** เพื่อดูเต็มหน้าต่าง (ออกด้วย Esc) |
+| `/compare/:pageId` | เทียบ 3 ธีมข้างกันด้วย iframe จริง |
+| `/lab/:group` | คลังคอมโพเนนต์ (`buttons` `dropdowns` `toggles` `loaders`) |
+| `/embed/:themeId/:pageId` | หน้าจอเปล่าไม่มีเปลือก — เป้าหมายของ iframe |
+
+- `themeId` = `tech` · `school` · `neu` · `edura` · `skooldio`
+- `pageId` = `login` · `subjects` · `lesson` · `quiz` · `results`
+- ภาษาเป็น query param: `?lang=th` หรือ `?lang=en` (URL ชนะค่าที่จำไว้ใน localStorage เสมอ
+  เพื่อให้ iframe รับภาษาต่อจากหน้าแม่ได้)
+
+**สลับธีม** = คงหน้าจอเดิมไว้ · **สลับหน้าจอ** = คงธีมเดิมไว้
+กดครั้งเดียวเปลี่ยนได้ทีละแกน — นี่คือ interaction หลักของทั้งเว็บ
+
+---
+
+## สถาปัตยกรรมธีม — สิ่งที่ต้องเข้าใจก่อนแก้โค้ด
+
+**กฎเดียว: มีไฟล์หน้าจอ 5 ไฟล์ ไม่ใช่ 15**
+
+แบ่งเป็น 5 ชั้น มีเพียงชั้น E เท่านั้นที่มีโค้ดเฉพาะธีม
+
+| ชั้น | อยู่ที่ไหน | หน้าที่ |
+|---|---|---|
+| **A** Design tokens | `src/styles/tokens.css` + `themes/*.css` | CSS custom properties, override ด้วย `[data-theme="…"]` |
+| **B** Recipes | `src/styles/recipes.css` | `.ui-surface` `.ui-panel` `.ui-inset` `.ui-interactive` — CSS โครงสร้างที่ขับด้วย token |
+| **C** Primitives | `src/components/` | `<Button>` `<Card>` `<Field>` … เขียนครั้งเดียว **ห้ามมี `if (theme === …)`** |
+| **D** Screens | `src/screens/` | 5 หน้า + `AppShell`/`AppBar` เขียนครั้งเดียว ประกอบจาก primitives |
+| **E** Theme decor | `src/themes/{tech,school,neu}/` | `<Backdrop>` + decor slot — JSX เฉพาะธีมมีแค่ที่นี่ |
+
+### ทำไมถึงเวิร์ก
+
+Tailwind v4 คอมไพล์ `bg-primary` เป็น `background-color: var(--color-primary)`
+การสลับธีมจึงเป็นแค่การเปลี่ยนค่าตัวแปร ไม่ต้องมี logic ใน JS เลย
+
+```jsx
+// src/components/Button.jsx — ไม่มี if (theme === …) แม้แต่ตัวเดียว
+variant === 'primary' && 'bg-primary text-on-primary shadow-raised'
+```
+
+JSX บรรทัดเดียวกันนี้เรนเดอร์ออกมาเป็น
+**ปุ่มกระจกนีออน** (tech) / **ปุ่มสติกเกอร์คอรัลที่กดแล้วยุบ** (school) / **ปุ่มนูนม่วงนุ่ม** (neu)
+
+> ⚠️ **ห้ามใช้ `@theme inline`** ใน `tokens.css` — มันจะฝังค่าจริงลงใน utility
+> ทำให้ override ตอน runtime ไม่ทำงาน และธีมจะพังทั้งระบบ
+
+### `data-theme` อยู่บน div ครอบ ไม่ใช่ `<html>`
+
+เพราะ CSS custom properties สืบทอดลงมาอยู่แล้ว การ scope จึงแม่นยำ
+และนี่คือเหตุผลที่โหมดเทียบข้างกัน (3 ธีมในหน้าเดียว) ทำได้ตั้งแต่แรก
+
+### สัญญา token
+
+ทุกธีมต้องตอบ token ชุดเดียวกันใน `src/styles/tokens.css` ชื่อต้องเป็น **semantic** เสมอ
+(`--color-primary` ห้ามเป็น `--color-cyan-400`)
+
+### ความมนกับแบบกรอบต้องไม่ซ้ำกันสักธีม
+
+ถ้าสองธีมมนเท่ากันและใช้กรอบแบบเดียวกัน ผู้ประเมินจะแยกออกจากกันด้วยตายาก
+ซึ่งทำลายจุดประสงค์ของเว็บนี้ทั้งหมด `audit:tokens` จึงตรวจว่า radius ไม่ซ้ำกัน
+
+| ธีม | `--radius-ui / --radius-card` | กรอบ (variant ในคลัง) |
+|---|---|---|
+| `edura` | 0.25 / 0.375rem | `frm-no-border` — ไม่มีขอบ ใช้สีตัดกัน |
+| `tech` | 0.5 / 0.875rem | `frm-glow-hairline` — เส้นผมเรืองแสง |
+| `skooldio` | 0.75 / 1.125rem | `frm-crisp-line` — เส้นคมชัด |
+| `school` | 1.25 / 2rem | `frm-hard-offset` — เงาแข็งแบบสติกเกอร์ |
+| `neu` | 1.5 / 2.5rem | `frm-soft-emboss` — เงานูนคู่ ไม่มีขอบ |
+
+หมวด **กรอบ** ในคลังคือแคตตาล็อกของภาษากรอบทั้งหมด (6 แบบ รวม `frm-corner-brackets` ที่ยังไม่มีธีมไหนใช้)
+ธีมแต่ละตัวเลือกไปหนึ่งแบบแล้วทำให้เป็นจริงผ่าน `--shadow-raised` + `--ui-border-width`
+บนหน้าแรกและแถบสตูดิโอจะโชว์ชื่อกรอบเป็นลิงก์ กดแล้วเด้งไปที่ variant นั้นในคลังเลย
+
+> `npm run verify` ตรวจว่ากรอบที่ทุกธีมประกาศไว้มีอยู่จริงในคลัง ไม่ใช่ลิงก์ตาย
+
+---
+
+### สเปกของแต่ละธีม
+
+`THEMES[id].spec` เก็บ **ฟอนต์ · ความมน · แบบกรอบ** ไว้เป็นคำอธิบายให้คนเลือกธีมได้ง่ายขึ้น
+แสดงผลผ่าน `src/site/ThemeSpec.jsx` — เต็มรูปแบบบนการ์ดหน้าแรก และแบบย่อในแถบสตูดิโอ
+
+| ธีม | ฟอนต์หัวข้อ / เนื้อความ | ลักษณะ |
+|---|---|---|
+| `tech` | Anuphan | ไม่มีหัว เรขาคณิต |
+| `school` | Kodchasan / Sarabun | มีหัว อ่านง่าย |
+| `neu` | Prompt | ไม่มีหัว มนกลม |
+| `edura` | IBM Plex Sans Thai | มีหัว เป็นทางการ |
+| `skooldio` | IBM Plex Sans Thai Looped / IBM Plex Sans Thai | มีหัว หัวข้อเป็นแบบห่วง |
+
+> `spec` เป็นแค่ข้อความอธิบาย **ค่าจริงอยู่ในไฟล์ CSS ของธีมเสมอ**
+> แก้ค่าใน CSS แล้วต้องแก้ `spec` ให้ตรงกันด้วย (radius มี audit คอยจับ ส่วนชื่อฟอนต์ยังต้องดูเอง)
+
+---
+
+### พื้นหน้ากับพื้นผิวมีสีเนื้อหาคนละชุด
+
+ธีม `edura` มีพื้นกรมท่าเข้มแต่การ์ดเป็นสีขาว — ตัวหนังสือจึงต้องขาวบนพื้น แต่ต้องเข้มบนการ์ด
+`--color-text` ตัวเดียวทำสองอย่างนี้พร้อมกันไม่ได้ จึงมี token อีกชุด:
+
+| token | ใช้เมื่อ |
+|---|---|
+| `--color-text` · `--color-muted` · `--color-primary-ink` | เนื้อหาวางตรงบน `--color-bg` |
+| `--ui-on-surface` · `--ui-on-surface-muted` · `--ui-on-surface-primary` | เนื้อหาอยู่ใน `.ui-surface` / `.ui-panel` / `.ui-inset` / `.ui-menu` |
+
+กลไกอยู่ใน `recipes.css` บรรทัดเดียว — recipe ทับค่าตัวแปรให้ลูกหลานทั้งหมด:
+
+```css
+.ui-surface, .ui-panel, .ui-inset, .ui-menu {
+  --color-text: var(--ui-on-surface);
+  --color-muted: var(--ui-on-surface-muted);
+  --color-primary-ink: var(--ui-on-surface-primary);
+  color: var(--color-text);
+}
+```
+
+utility ของ Tailwind อ้าง `var()` อยู่แล้ว `text-text` และ `text-muted` ที่อยู่ในการ์ดจึงเปลี่ยนตามเอง
+**ไม่ต้องแก้คอมโพเนนต์แม้แต่ตัวเดียว**
+
+> ⚠️ `--ui-on-surface` **ต้องเป็นค่าจริง ห้ามเขียนเป็น `var(--color-text)`**
+> เพราะ recipe ทับ `--color-text` ด้วยตัวมันเอง จะกลายเป็นการอ้างวนแล้วพังทั้งชุด
+> `audit:tokens` จึงบังคับให้ทุกธีมตอบทั้งสามตัว ธีมที่พื้นกับการ์ดโทนเดียวกันก็ใส่ค่าเดียวกันซ้ำ
+
+### ⚠️ กฎที่พลาดง่ายที่สุดในโปรเจคนี้
+
+> **ถ้าคุณวาดพื้นผิวเอง คุณต้องรับ token ของเนื้อหาบนพื้นผิวนั้นด้วย**
+
+recipe (`.ui-surface` ฯลฯ) ทำให้อัตโนมัติ แต่ CSS ที่เขียนเองไม่ได้
+เคยพลาดมาแล้ว **3 รอบ** — Avatar, ปุ่ม ghost, และ variant ในคลัง 33 บล็อก
+อาการเหมือนกันหมด: ในธีมพื้นเข้ม-การ์ดขาว (`edura`) ตัวหนังสือกลายเป็นสว่างบนพื้นสว่างแล้วหายไปทั้งหมด
+
+```css
+/* ทุกครั้งที่เขียน background: var(--ui-card-bg) หรือ var(--ui-field-bg) เอง */
+--color-text: var(--ui-on-surface);
+--color-muted: var(--ui-on-surface-muted);
+--color-primary-ink: var(--ui-on-surface-primary);
+color: var(--color-text);
+```
+
+**และห้ามอ้าง `--color-border` / `--color-surface-2` ตรงๆ กับสิ่งที่ต้องมองเห็นเสมอ**
+เพราะ `neu` ตั้ง border เป็น `transparent` และ `edura` ตั้ง `--ui-border-width` เป็น `0`
+ช่องติ๊กที่ยังไม่กดจะหายไปทั้งช่องจนไม่รู้ว่ากดได้ ให้ใช้เฉดของ currentColor แทน:
+
+```css
+border: 2px solid color-mix(in oklch, currentColor 32%, transparent);
+```
+
+รางสวิตช์ก็เช่นกัน — ลูกบิดสีขาวบนราง `--color-surface-2` จะหายในธีมพื้นเข้ม
+ใช้ราง `color-mix(... var(--color-text) 22% ...)` คู่กับลูกบิด `var(--color-bg)` ซึ่งตัดกันเสมอทุกธีม
+
+> `npm run verify` วัดให้แล้วทุกธีม: ขอบช่องติ๊กตอนยังไม่กด ≥ 1.4:1 และตัวหนังสือในช่องกรอก ≥ 4.5:1
+
+---
+
+### สีแบรนด์แยกเป็นสองตัว: `--color-primary` กับ `--color-primary-ink`
+
+| token | ใช้ทำอะไร | เกณฑ์ |
+|---|---|---|
+| `--color-primary` | **พื้น** ของปุ่ม แถบ ป้าย | `--color-on-primary` ทับบนมันต้อง ≥ 4.5:1 |
+| `--color-primary-ink` | **ตัวหนังสือ/ไอคอน**สีแบรนด์บนพื้นหลัง | ต้อง ≥ 4.5:1 บน bg / surface / surface-2 |
+
+ต้องแยกเพราะสีแบรนด์ที่สวยมักสว่างเกินกว่าจะเป็นตัวหนังสือได้
+อำพัน `#fbaa1b` ของ Skooldio อยู่ที่ **2:1** บนพื้นขาว — เป็นปุ่มได้ แต่เป็นลิงก์ไม่ได้
+
+`--color-primary-ink` มีค่ากลางเป็น `var(--color-primary)` ธีมที่สีแบรนด์เข้มพอจึงไม่ต้องตั้ง
+แต่ตอนตรวจจริงพบว่า**ทุกธีมต้องตั้ง**เพราะได้แค่ 3.2–4.1:1
+ธีมมืด (`tech`) ต้องตั้งให้ **สว่างขึ้น** ไม่ใช่เข้มลง เพราะพื้นผิวกระจกสว่างกว่าพื้นหลัง
+
+> `--color-primary` ไม่ถูกตรวจกับพื้นหลังหน้า เพราะมันเป็นพื้น ไม่ใช่ตัวหนังสือ
+> ขอบเขตของปุ่มเป็นหน้าที่ของ `--shadow-raised` ซึ่งทุกธีมให้เส้นหรือเงาที่มองเห็นไว้แล้ว
+> (`skooldio` ใส่เส้นผมสีเข้มไว้ในเงาโดยเฉพาะ เพราะปุ่มอำพันบนขาวไม่มีขอบจะหาไม่เจอ)
+
+**สัญญาสามสถานะที่ทุกธีมต้องตอบให้ได้:**
+
+| token | tech | school | neu |
+|---|---|---|---|
+| `--shadow-raised` | เรืองแสงนีออน | เงาแข็ง `0 4px 0` แบบสติกเกอร์ | เงาคู่ สว่างบนซ้าย/เข้มล่างขวา |
+| `--shadow-pressed` | glow เข้าใน | ยุบเหลือ `0 1px 0` | `inset` เงาคู่ |
+| `--shadow-glow` | เรืองแสงแรงขึ้น | วงแหวนมินต์ | ขอบชมพูนุ่ม |
+
+รัน `npm run audit:tokens` เพื่อตรวจว่าไม่มีธีมไหนลืมตอบ
+
+### ธีม neu คือบททดสอบของสถาปัตยกรรม
+
+Neumorphism ปกติบังคับให้ต้อง fork โค้ด เพราะ:
+1. พื้นผิวต้องเป็นสีเดียวกับพื้นหลัง → `--color-surface: var(--color-bg)`
+2. ไม่มีเส้นขอบเลย → `--ui-border-width: 0px`
+3. ทุกสถานะสื่อด้วยเงาล้วน → เงาคู่ + `--ui-panel-shadow`
+
+พื้นเป็นขาวนวลที่เจือม่วงบางๆ ส่วนสีม่วงจริงถูกเก็บไว้ใช้เป็นตัวเน้นและอยู่ในเงาด้านมืด
+พื้นสว่างแบบนี้จำเป็นเพราะไฮไลต์ของ neumorphism เป็นสีขาว — ถ้าพื้นเข้ม ไฮไลต์จะหายไป
+
+> `--ui-panel-shadow` ถูกเพิ่มเข้าสัญญา token เพราะธีมนี้ไม่มีเส้นขอบ
+> พื้นผิวย่อย (ตัวเลือกข้อสอบ ปุ่มรอง) จึงต้องนูนขึ้นมาด้วยเงา ไม่งั้นหายไปกับพื้นหลังสนิท
+> ธีมที่มีเส้นขอบปล่อยให้เป็น `none` ได้
+
+พอเขียนเป็น token ครบ 3 ข้อ → **ไม่ต้องแก้ JSX แม้แต่บรรทัดเดียว**
+ถ้าจะเพิ่มธีมที่ 4 แล้วพบว่าต้องแก้ไฟล์ใน `src/screens/` แปลว่าสัญญา token ยังไม่ครบ — แก้ที่ token ก่อน
+
+---
+
+## เพิ่มธีมใหม่
+
+1. สร้าง `src/styles/themes/<id>.css` แล้วตอบ token ให้ครบ (ดู `neu.css` เป็นตัวอย่างที่ยากที่สุด)
+2. `@import` เข้า `src/styles/index.css` — **ต้องอยู่หลัง `tokens.css` ก่อน `recipes.css`**
+3. สร้าง `src/themes/<id>/Backdrop.jsx` และ `decor.jsx`
+4. ลงทะเบียนใน `src/theme/themes.js`
+5. `npm run audit:tokens` ต้องผ่าน
+
+ไม่ต้องแตะไฟล์ใน `src/screens/` หรือ `src/components/` เลย
+
+สคริปต์ตรวจ (`audit:tokens`, `audit:contrast`, `verify`) อ่านรายชื่อธีมจากโฟลเดอร์
+`src/styles/themes/` เอง — วางไฟล์ธีมใหม่แล้วถูกตรวจครบทุกหน้าทันที ไม่มีทางลืมอัปเดต
+
+---
+
+## เพิ่มคอมโพเนนต์ใน Lab
+
+**ปัจจุบันมี 73 ตัว ใน 8 กลุ่ม** — ปุ่ม 13 · ดรอปดาวน์ 11 · ช่องกรอก 9 · สวิตช์ 9 · ตัวโหลด 9 · ปุ่มไอคอน 8 · การ์ด 8 · กรอบ 6
+
+จำนวนนี้เกินเพดาน ~40 ที่เคยแนะนำไว้ ใช้ช่องค้นหาและตัวกรองแท็กในแผงควบคุมช่วยไล่ดู
+ถ้าจะเพิ่มอีก แนะนำให้แตกกลุ่มย่อยแทนการยัดเพิ่มในกลุ่มเดิม
+
+วางไฟล์ใหม่ใน `src/lab/variants/<group>/` — **ลงทะเบียนอัตโนมัติ ไม่ต้องแก้ registry**
+(ถ้าเพิ่มกลุ่มใหม่ ต้องเติมชื่อกลุ่มใน `GROUPS` ของ `registry.js` + คีย์ใน `lab.groups` ของทั้งสอง locale)
+
+```jsx
+export const meta = {
+  id: 'btn-my-variant',
+  // buttons | dropdowns | inputs | toggles | loaders | iconbuttons | cards | frames
+  group: 'buttons',
+  name: { th: 'ชื่อไทย', en: 'English name' },
+  tags: ['hover', 'css-only'],
+};
+
+export const css = `.v-my-variant { /* ... */ }`;
+
+export default function MyVariant({ label, size = 'md', disabled, loading }) { /* ... */ }
+```
+
+สองอย่างที่ทำให้ระบบนี้ไม่มีทางเพี้ยน:
+- `import.meta.glob` → วางไฟล์ = ลงทะเบียนเอง
+- `query: '?raw'` → โค้ดที่แสดงคือ **ซอร์สจริงของไฟล์นั้น** จึงไม่มีทางไม่ตรงกับที่เรนเดอร์
+
+**เขียนแต่ละไฟล์ให้อยู่ได้ด้วยตัวเอง** (ไม่ import ไฟล์อื่นในโปรเจค) เพราะจุดขายคือคัดลอกไปวางแล้วใช้ได้เลย
+ต้องการแค่ token ตามที่ระบุไว้ท้ายแผงโค้ด
+
+**ห้ามใช้ JS ทำอนิเมชั่น** — ใช้ `@starting-style` + `transition-behavior: allow-discrete`
+หรือ `[data-open]` เท่านั้น
+
+---
+
+## อนิเมชั่น: ไม่ใช้ library เลย
+
+`src/styles/motion.css` ทำให้จังหวะการเคลื่อนไหวเป็น **token** เหมือนสี ธีมจึงกำหนดบุคลิกของตัวเองได้
+
+```css
+--dur-scale: 1;                                /* Lab ปรับตัวนี้ตัวเดียวเพื่อทำ slow-motion */
+--dur-fast / --dur-base / --dur-slow
+--ease-smooth / --ease-back / --ease-spring    /* spring ใช้ linear() ซึ่งเป็นสปริงจริง */
+```
+
+| ธีม | บุคลิก |
+|---|---|
+| tech | คม เฉียบ เร็ว |
+| school | เด้ง (`--ease-back`) |
+| neu | นุ่ม ลื่น |
+
+`prefers-reduced-motion: reduce` ตั้ง `--dur-scale: 0.001` ให้ทั้งระบบในที่เดียว
+และปิด 3D / คอนเฟตติ / วงพลังงานทั้งหมด
+
+---
+
+## three.js
+
+ใช้ **ที่เดียว**: พื้นหลังธีม tech · school กับ neu ใช้ CSS/SVG ล้วน ไม่ import three เลย
+
+`src/themes/tech/Backdrop.jsx` เป็นด่านกรอง — ต้องผ่านครบทุกข้อถึงจะ `lazy()` โหลด:
+
+```
+live && !prefersReducedMotion && onScreen && supportsWebGL()
+```
+
+ใต้ล่างมี `BackdropFallback` (CSS gradient grid + blob) วาดไว้เสมอ
+ทำหน้าที่เป็นทั้ง poster ระหว่างรอโหลด และ fallback เมื่อไม่มี WebGL
+
+**กฎ perf ที่บังคับทุกข้อใน `Backdrop3D.jsx`** — ห้ามตัดออกข้อใดข้อหนึ่ง:
+
+- `setPixelRatio(min(devicePixelRatio, 1.5))` · `antialias: false`
+- `IntersectionObserver` หยุด rAF เมื่อพ้นจอ
+- `visibilitychange` หยุดเมื่อสลับแท็บ
+- จำกัด ~30fps (พื้นหลังตกแต่งไม่ต้องการ 60)
+- `ResizeObserver` ไม่ใช่ `window.resize` (กรอบเครื่องย่อขยายได้)
+- **teardown ครบ**: `cancelAnimationFrame` · `dispose()` ทุก geometry/material/texture/renderer ·
+  `forceContextLoss()` — ถ้าไม่ทำ สลับธีมไปกลับแล้ว WebGL context จะรั่วจนชนเพดาน ~16 ของเบราว์เซอร์
+
+สีอ่านจาก token ผ่าน `getComputedStyle(el).getPropertyValue('--color-primary')`
+→ ปรับ `tech.css` แล้วเลเยอร์ 3D เปลี่ยนตามเอง
+
+`vite.config.js` แยก `three` เป็น chunk ต่างหาก → เปิด `/showcase/school/login` **ไม่โหลด three.js เลย**
+
+---
+
+## i18n
+
+ไม่ใช้ library — `src/i18n/I18nProvider.jsx` ~90 บรรทัด
+
+```js
+t('quiz.qOf', { n: 3, total: 10 })   // ข้อความของเปลือก UI — คีย์ซ้อนชั้น + {placeholder}
+p(subject.title)                      // เนื้อหาจำลอง — object { th, en } ที่ฝังใน mock/data.js
+```
+
+**ทำไมเนื้อหาไม่อยู่ใน locale:** ชื่อวิชาคือ *เนื้อหา* ไม่ใช่ *เปลือก UI*
+ถ้ายัดเข้า locale การเพิ่มวิชา 1 ตัวจะกลายเป็นการแก้ 2 ไฟล์
+
+กฎ 2 ข้อที่ทำให้ไม่เพี้ยน:
+1. `checkLocaleParity()` รันตอน dev — เตือนทันทีถ้ามี key ขาดไปในภาษาใดภาษาหนึ่ง
+2. **ห้ามต่อ string** ลำดับคำไทยกับอังกฤษต่างกัน ใช้ `{placeholder}` เสมอ
+
+### ภาษาไทยที่ต้องระวัง
+
+- วรรณยุกต์ซ้อนบน-ล่าง → `:where([lang="th"]) { line-height: 1.75 }` ใน `recipes.css`
+- ไทยไม่มีเว้นวรรคระหว่างคำ → `overflow-wrap: anywhere` และใช้ `line-clamp` แทนความสูงตายตัว
+- ต้องโหลดฟอนต์ไทยจริง (Anuphan / Mali / Prompt) เพราะ fallback ของระบบเรนเดอร์ไทยได้แย่
+
+---
+
+## เปลือกสองชั้น: AppShell กับ SiteLayout
+
+แยกกันชัดเจน อย่าสับสน:
+
+| | `src/screens/AppShell.jsx` | `src/site/SiteLayout.jsx` |
+|---|---|---|
+| เป็นอะไร | เปลือกของ **ตัวแอปจำลอง** | เปลือกของ **เครื่องมือสตูดิโอ** |
+| ทาธีมไหม | ทา — เป็นส่วนหนึ่งของสิ่งที่กำลังประเมิน | ไม่ทา ใช้สีกลางถาวร |
+| มีอะไร | `AppBar`: แบรนด์ + เมนู เลือกวิชา/บทเรียน/แบบทดสอบ/ผลสอบ + ค้นหา/แจ้งเตือน/โปรไฟล์ | สลับธีม สลับหน้า ขนาดจอ เครื่องมือสถานะ |
+
+`AppBar` มีไว้เพราะโปรเจคจริงที่มีหลายส่วนต้องมีที่ให้ผู้เรียนสลับหน้า
+ไม่แสดงในหน้าล็อกอินเพราะยังไม่ได้เข้าระบบจึงยังไม่มีเมนูให้ไป
+`ShowcasePage` และ `EmbedPage` ใช้ `AppShell` ตัวเดียวกัน จึงไม่มีทางแสดงผลต่างกัน
+
+> ระวังตอนเขียนเทสต์: ทั้งสองชั้นมีปุ่มชื่อซ้ำกัน (เช่น "ผลสอบ")
+> ต้อง scope ด้วย `[data-theme] header nav` หรือ `[role="group"][aria-label="หน้าจอ"]`
+
+---
+
+## กล่องที่เลื่อนได้กับเงาที่โดนตัด
+
+`overflow-x-auto` และ `overflow-y-auto` **ตัดทั้งสองแกนเสมอ** ไม่ใช่แค่แกนที่ระบุ
+องค์ประกอบที่ยกตัวหรือเรืองแสงตอน hover จึงโดนตัดขอบถ้าไม่เผื่อที่ไว้
+
+รูปแบบที่ใช้ในโปรเจคนี้ — ใส่ padding คู่กับ negative margin เพื่อขยายกล่องโดยไม่ขยับตำแหน่งเนื้อหา:
+
+```jsx
+// แถบชิปที่เลื่อนแนวนอน
+<div className="-mx-2 flex gap-2 overflow-x-auto px-2 pb-5 pt-3">
+
+// ul ของ accordion ที่ต้อง overflow-hidden เพื่อให้ 0fr→1fr ทำงาน
+<ul className="-mx-2 min-h-0 overflow-hidden px-2 py-1">
+```
+
+`npm run verify` วัดระยะนี้ให้อัตโนมัติ (playlist ≥ 6px, แถบชิป ≥ 10px, แถวล่างของกริด ≥ 48px)
+ตัวเลขมาจากขนาดเงาจริงของธีมที่แผ่กว้างที่สุด
+
+---
+
+## เครื่องมือสตูดิโอ
+
+เปลือกเว็บ (nav / switcher / กรอบเครื่อง) **จงใจไม่ทาธีม** ใช้สีกลางถาวรผ่าน `.studio` ใน `studio.css`
+ถ้าเปลือกเปลี่ยนสีตามธีมด้วย จะแยกไม่ออกว่ากำลังประเมินอะไรอยู่
+
+ในหน้า `/showcase/*` มีปุ่มบังคับสถานะ 3 อย่าง (`ScreenStateProvider`):
+**จำลองข้อผิดพลาด · จำลองกำลังโหลด · จำลองโครงร่าง**
+มีไว้เพื่อให้ตรวจสถานะเหล่านี้ของทุกธีมได้โดยไม่ต้องเดา — เป็นเครื่องมือประเมิน ไม่ใช่ส่วนหนึ่งของหน้าจอจริง
+
+---
+
+## โครงสร้างไฟล์
+
+```
+src/
+├─ styles/          tokens · motion · recipes · studio · lab + themes/{tech,school,neu}.css
+├─ theme/           themes.js (ทะเบียน) · ThemeFrame.jsx (ขอบเขตธีม + overlay host)
+├─ components/      primitives ที่ไม่รู้จักธีม (15 ตัว)
+├─ screens/         5 หน้า + AppShell/AppBar + parts/ + screenState.jsx
+├─ themes/          JSX เฉพาะธีม — Backdrop + decor slot
+├─ mock/data.js     แหล่งข้อมูลเดียวของทั้ง 15 จอ + scoreQuiz()
+├─ i18n/            I18nProvider + locales/{th,en}.js
+├─ site/            เปลือกสตูดิโอ · HomePage · ShowcasePage · ComparePage · EmbedPage
+└─ lab/             registry.js (auto-glob) · LabPage · variants/
+```
+
+---
+
+## Dependencies
+
+**runtime 3 ตัว:** `react-router` · `three` · `clsx`
+**dev:** `vite` · `@vitejs/plugin-react` · `tailwindcss` · `@tailwindcss/vite` · `oxlint` · `playwright`
+
+ที่จงใจ **ไม่** ใช้:
+
+| ไม่ใช้ | เพราะ |
+|---|---|
+| framer-motion | CSS สมัยใหม่ทำสปริงได้ด้วย `linear()` และ Lab ต้องการโค้ดที่คัดลอกไปใช้ได้โดยไม่ต้องลง dependency |
+| @react-three/fiber + drei | ต้องการแค่พื้นหลังนิ่ง 1 จุด ไม่คุ้มกับ reconciler + ~150 kB |
+| react-i18next | สลับแค่ 2 ภาษา ไม่มี plural/date/RTL |
+| chart library | กราฟที่มีคือแท่ง CSS กับ SVG ไม่กี่เส้น |
+| tailwind-merge | variant ในโปรเจคนี้ไม่ทับกันเอง |
+
+---
+
+## หมายเหตุ
+
+`git init` ในโฟลเดอร์นี้แล้ว — อย่ารัน git จากโฟลเดอร์แม่
+เพราะมี `.git` ค้างอยู่ที่ `C:\Users\sathika\.git` ซึ่งครอบทั้ง home directory (`.ssh/`, AppData ฯลฯ)

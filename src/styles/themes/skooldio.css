@@ -1,0 +1,69 @@
+/* ============================================================
+   THEME: SKOOLDIO — Blue, White & Green
+   ------------------------------------------------------------
+   พื้นขาวล้วน ตัวหนังสือเกือบดำ ตัวหนาหนักมือ เว้นที่ว่างเยอะ
+   เน้นด้วยฟ้าเป็นหลักและเขียวเป็นตัวรอง
+
+   ใช้ฟ้า/เขียวเพื่อไม่ให้ชนกับ edura ที่เป็นกรมท่า+อำพัน
+   สองธีมนี้ต้องแยกออกจากกันได้ในครึ่งวินาทีแรกที่เห็น
+
+   กรอบ: เส้นคมชัด (frame-crisp-line) — เส้นทำงานหนัก เงาแทบไม่มี
+   ============================================================ */
+
+[data-theme='skooldio'] {
+  color-scheme: light;
+
+  --color-bg: oklch(100% 0 0); /* ขาวล้วน ไม่มีเฉด */
+  --color-surface: oklch(100% 0 0);
+  --color-surface-2: oklch(96.5% 0.008 240);
+  --color-border: oklch(87% 0.014 240);
+  --color-text: oklch(21% 0.014 250); /* เกือบดำ อมฟ้านิดเดียว */
+  --color-muted: oklch(48% 0.018 250);
+
+  /* ฟ้าเข้มพอที่ตัวหนังสือขาวทับแล้วยังผ่านเกณฑ์ */
+  --color-primary: oklch(50% 0.19 250);
+  --color-on-primary: oklch(100% 0 0);
+  --color-primary-ink: oklch(45% 0.17 250);
+  --color-accent: oklch(58% 0.15 158); /* เขียว — ตัวเน้นรอง */
+
+  --color-success: oklch(50% 0.15 155);
+  --color-warn: oklch(56% 0.14 62);
+  --color-danger: oklch(52% 0.2 27);
+
+  /* พื้นขาวกับการ์ดขาวเป็นสีเดียวกัน เนื้อหาจึงใช้ค่าเดียวกัน */
+  --ui-on-surface: oklch(21% 0.014 250);
+  --ui-on-surface-muted: oklch(48% 0.018 250);
+  --ui-on-surface-primary: oklch(45% 0.17 250);
+
+  /* ลำดับความมนของทั้งโปรเจค: edura 0.25 → tech 0.5 → skooldio 0.75 → school 1.25 → neu 1.5 */
+  --radius-ui: 0.75rem;
+  --radius-card: 1.125rem;
+
+  --font-sans: 'IBM Plex Sans Thai', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'IBM Plex Sans Thai Looped', 'IBM Plex Sans Thai', ui-sans-serif, sans-serif;
+
+  /* ★ กรอบ = เส้นคมชัด
+     เส้นผมสีเข้มในบรรทัดแรกคือ "กรอบ" จริงๆ ส่วนเงาแค่ยกขึ้นนิดเดียว
+     ทำให้พื้นผิวขาวบนพื้นขาวยังแยกออกจากกันได้โดยไม่ต้องพึ่งเงาฟุ้ง */
+  --shadow-raised:
+    0 0 0 1.5px oklch(21% 0.014 250 / 0.13), 0 1px 2px oklch(21% 0.014 250 / 0.05),
+    0 4px 12px oklch(21% 0.014 250 / 0.06);
+  --shadow-pressed: inset 0 2px 4px oklch(21% 0.014 250 / 0.12);
+  --shadow-glow: 0 0 0 3px oklch(50% 0.19 250 / 0.35);
+
+  --ui-backdrop: none;
+  --ui-border-width: 1.5px;
+  --ui-card-bg: var(--color-surface);
+  --ui-panel-shadow: none;
+  --ui-field-bg: oklch(100% 0 0);
+  --ui-field-border: oklch(83% 0.016 240);
+  --ui-hover-lift: -3px;
+  /* hover เปลี่ยนเป็นขอบเข้มหนา แทนที่จะเรืองแสง — เป็นภาษาของดีไซน์แบบนี้ */
+  --ui-hover-shadow: 0 0 0 1.5px oklch(21% 0.014 250), 0 10px 22px oklch(21% 0.014 250 / 0.12);
+  --ui-press-scale: 0.985;
+  --ui-focus-ring: 0 0 0 3px oklch(50% 0.19 250 / 0.4), 0 0 0 5px oklch(21% 0.014 250 / 0.2);
+  --ui-heading-weight: 700;
+  --ui-tracking: -0.015em;
+  --ui-overlay: oklch(21% 0.014 250 / 0.55);
+  --ui-overlay-blur: blur(2px);
+}

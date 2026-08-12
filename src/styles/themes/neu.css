@@ -1,0 +1,82 @@
+/* ============================================================
+   THEME: NEUMORPHISM — สีสัน
+   ------------------------------------------------------------
+   ธีมที่ยากที่สุด และเป็นบททดสอบว่าสัญญา token ดีพอไหม
+   Neumorphism ปกติบังคับให้ต้อง fork โค้ด เพราะ:
+     1. พื้นผิวต้องเป็นสีเดียวกับพื้นหลัง  → --color-surface: var(--color-bg)
+     2. ไม่มีเส้นขอบเลย                    → --ui-border-width: 0px
+     3. ทุกสถานะสื่อด้วยเงาล้วน            → เงาคู่ (สว่างบนซ้าย / เข้มล่างขวา)
+   พอเขียนเป็น token ครบ 3 ข้อ → ไม่ต้องแก้ JSX แม้แต่บรรทัดเดียว
+
+   ข้อควรระวังคลาสสิกของ neumorphism คือ contrast ต่ำจนอ่านไม่ออก
+   ค่าที่ตั้งไว้ตรงนี้เล็งให้ --color-muted บน --color-bg ผ่าน 4.5:1
+   ============================================================ */
+
+[data-theme='neu'] {
+  color-scheme: light;
+
+  /* พื้นขาวนวลที่มีม่วงเจืออยู่บางๆ — ไม่ใช่ม่วงทั้งหน้า
+     สีม่วงถูกเก็บไว้ใช้เป็นตัวเน้น (ปุ่ม ตัวเลข ไอคอน) และในเงาด้านมืด
+     พื้นสว่างแบบนี้ยังทำให้ไฮไลต์สีขาวของ neumorphism อ่านออกด้วย */
+  --color-bg: oklch(96.5% 0.012 295);
+  --color-surface: var(--color-bg); /* ★ ระนาบเดียวกับพื้น */
+  /* surface-2 เข้มกว่าพื้นเล็กน้อย ไม่เท่ากับพื้นเป๊ะ
+     เพราะป้ายกำกับ ชิป และแถวที่ hover ต้องมองเห็นได้ ไม่งั้นหายไปทั้งหมด */
+  --color-surface-2: oklch(92.5% 0.022 295);
+  --color-border: transparent;
+  --color-text: oklch(26% 0.045 295);
+  --color-muted: oklch(46% 0.04 295);
+
+  --color-primary: oklch(50% 0.19 295); /* ม่วง — ตัวเน้นหลัก */
+  --color-on-primary: oklch(99% 0.005 295);
+  --color-primary-ink: oklch(40% 0.16 295);
+  --color-accent: oklch(56% 0.15 330); /* ม่วงอมชมพู — ตัวเน้นรอง */
+
+  /* กดความสว่างลงให้ผ่าน WCAG AA บนพื้นม่วงสว่าง (ดู npm run audit:contrast) */
+  --color-success: oklch(44% 0.14 150);
+  --color-warn: oklch(46% 0.12 70);
+  --color-danger: oklch(48% 0.2 25);
+
+  /* neu มีระนาบเดียวทั้งหน้าอยู่แล้ว เนื้อหาบนการ์ดจึงเหมือนบนพื้นเป๊ะ */
+  --ui-on-surface: oklch(26% 0.045 295);
+  --ui-on-surface-muted: oklch(46% 0.04 295);
+  --ui-on-surface-primary: oklch(40% 0.16 295);
+
+  /* มนที่สุดในบรรดา 5 ธีม — neumorphism ต้องการมุมมนมากเพื่อให้เงาคู่ไล่โค้งได้ต่อเนื่อง
+     ลำดับความมน: edura 0.25 → tech 0.5 → skooldio 0.75 → school 1.25 → neu 1.5 */
+  --radius-ui: 1.5rem;
+  --radius-card: 2.5rem;
+
+  --font-sans: 'Prompt', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Prompt', ui-sans-serif, sans-serif;
+
+  /* ★ แหล่งกำเนิดแสงคู่ — หัวใจของ neumorphism ทั้งหมด อยู่ในสาม token นี้
+     ด้านสว่างเป็นขาวล้วน ด้านมืดเป็นม่วงอมเทา (ไม่ใช่ดำ) นี่คือที่ที่สีม่วงแทรกเข้ามา */
+  --shadow-raised:
+    -7px -7px 14px oklch(100% 0 0 / 0.9), 7px 7px 16px oklch(62% 0.06 295 / 0.3);
+  --shadow-pressed:
+    inset -5px -5px 10px oklch(100% 0 0 / 0.85), inset 5px 5px 11px oklch(62% 0.06 295 / 0.32);
+  --shadow-glow:
+    -4px -4px 9px oklch(100% 0 0 / 0.9), 4px 4px 10px oklch(62% 0.06 295 / 0.28),
+    0 0 0 2px oklch(50% 0.19 295 / 0.4);
+
+  --ui-backdrop: none;
+  --ui-border-width: 0px; /* ★ ไม่มีขอบ */
+  --ui-card-bg: var(--color-bg);
+  /* ★ ธีมนี้ไม่มีขอบ พื้นผิวย่อยจึงต้องนูนขึ้นมาด้วยเงา ไม่งั้นมองไม่เห็นเลย
+     (เบากว่า --shadow-raised เพื่อไม่ให้แข่งเด่นกับการ์ดหลัก) */
+  --ui-panel-shadow:
+    -4px -4px 9px oklch(100% 0 0 / 0.85), 4px 4px 10px oklch(62% 0.06 295 / 0.26);
+  --ui-field-bg: var(--color-bg);
+  --ui-field-shadow: var(--shadow-pressed); /* ★ ช่องกรอกเป็นรอยกด */
+  --ui-field-border: transparent;
+  --ui-hover-lift: 0px; /* neu ไม่ลอย แต่เงาลึกขึ้น */
+  --ui-hover-shadow:
+    -9px -9px 18px oklch(100% 0 0 / 0.95), 9px 9px 20px oklch(62% 0.06 295 / 0.36);
+  --ui-press-scale: 1; /* ไม่ย่อ ใช้เงา inset สื่อการกดแทน */
+  --ui-focus-ring: 0 0 0 3px oklch(50% 0.19 295 / 0.5);
+  --ui-heading-weight: 600;
+  --ui-tracking: 0em;
+  --ui-overlay: oklch(58% 0.06 295 / 0.42);
+  --ui-overlay-blur: blur(4px);
+}
