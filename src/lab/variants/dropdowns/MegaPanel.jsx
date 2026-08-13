@@ -11,13 +11,17 @@ export const css = `
 .v-mega {
   display: block;
   width: 24rem;
-  background: var(--ui-card-bg);
+  background: var(--ui-menu-bg, var(--ui-card-bg));
   border: var(--ui-border-width) solid var(--color-border);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-raised);
-  transform-origin: top left;
+  /* จัดกึ่งกลางกับปุ่มแทนการชิดซ้าย เพราะแผงกว้าง 24rem ซึ่งกว้างกว่าปุ่มเกือบเท่าตัว
+     ถ้าชิดซ้ายมันจะยื่นออกไปทางขวาข้างเดียวจนพ้นขอบจอเมื่อปุ่มอยู่คอลัมน์ขวาสุด
+     จัดกึ่งกลางแล้วส่วนที่ยื่นถูกหารสองทั้งสองข้าง จึงอยู่ในจอได้
+     ในโปรเจคจริงที่รู้พื้นที่รอบปุ่ม ควรพลิกไปชิดขวาเมื่อทางขวาไม่พอ */
+  transform-origin: top center;
   opacity: 1;
-  translate: 0 0;
+  translate: -50% 0;
   scale: 1;
   transition:
     opacity var(--dur-base) var(--ease-smooth),
@@ -31,8 +35,8 @@ export const css = `
   --color-primary-ink: var(--ui-on-surface-primary);
   color: var(--color-text);
 }
-.v-mega[data-open='false'] { display: none; opacity: 0; translate: 0 -.5rem; scale: .98; }
-@starting-style { .v-mega[data-open='true'] { opacity: 0; translate: 0 -.5rem; scale: .98 } }
+.v-mega[data-open='false'] { display: none; opacity: 0; translate: -50% -.5rem; scale: .98; }
+@starting-style { .v-mega[data-open='true'] { opacity: 0; translate: -50% -.5rem; scale: .98 } }
 
 .v-mega-item { transition: background-color var(--dur-fast) var(--ease-smooth); }
 .v-mega-item:hover { background: var(--color-surface-2); }
@@ -91,7 +95,7 @@ export default function MegaPanel({ size = 'md', disabled }) {
         </svg>
       </button>
 
-      <div data-open={open} className="v-mega absolute left-0 z-20 mt-2 grid grid-cols-2 gap-1 p-2">
+      <div data-open={open} className="v-mega absolute left-1/2 z-20 mt-2 grid grid-cols-2 gap-1 p-2">
         {GROUPS.map((g) => (
           <div key={g.title}>
             <p className="px-2.5 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted">

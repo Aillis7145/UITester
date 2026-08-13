@@ -13,7 +13,7 @@ export const css = `
 .v-dd-acc {
   display: grid;
   grid-template-rows: 1fr;
-  background: var(--ui-card-bg);
+  background: var(--ui-menu-bg, var(--ui-card-bg));
   border: var(--ui-border-width) solid var(--color-border);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-raised);

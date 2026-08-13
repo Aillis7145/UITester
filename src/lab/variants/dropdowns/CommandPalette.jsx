@@ -5,6 +5,9 @@ export const meta = {
   group: 'dropdowns',
   name: { th: 'คอมมานด์พาเลตต์ (⌘K)', en: 'Command Palette' },
   tags: ['search', 'keyboard', 'modern'],
+  // ฉากคลุมกินพื้นที่ทั้งกรอบ + แผงสูงราว 17.5rem จึงต้องขอเวทีที่สูงพอ
+  // ไม่งั้นแผงจะยาวเลยฉากคลุมออกไปทั้งใบ
+  stage: { minHeight: '21rem' },
 };
 
 export const css = `
@@ -26,7 +29,7 @@ export const css = `
 .v-cmd-panel {
   width: 100%;
   max-width: 22rem;
-  background: var(--ui-card-bg);
+  background: var(--ui-menu-bg, var(--ui-card-bg));
   border: var(--ui-border-width) solid var(--color-border);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-raised);
@@ -103,7 +106,10 @@ export default function CommandPalette({ size = 'md', disabled }) {
   const H = { sm: 'h-9 text-sm', md: 'h-11', lg: 'h-13 text-lg' }[size] ?? 'h-11';
 
   return (
-    <div className="relative w-60">
+    // ไม่ตั้ง relative ที่ตัวห่อโดยตั้งใจ — ฉากคลุมต้องอ้างกับ "กรอบทั้งอัน"
+    // (ในโปรเจคจริงคือทั้งหน้าจอ ในคลังคือเวทีพรีวิว)
+    // ถ้าตั้ง relative ตรงนี้ inset: 0 จะกลายเป็นกล่องขนาดปุ่มแล้วแผงจะหลุดออกไปหมด
+    <div className="w-60">
       <button
         type="button"
         disabled={disabled}

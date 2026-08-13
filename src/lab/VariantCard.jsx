@@ -17,10 +17,13 @@ export function VariantCard({ variant, themeId, size, state, stageBg, id }) {
   const Component = variant.Component;
 
   return (
-    <article id={id} className="ui-surface overflow-hidden p-0">
+    <article id={id} className="ui-surface lab-card p-0">
       {/* ---------- เวทีพรีวิว ---------- */}
       <ThemeFrame themeId={themeId} backdrop={false}>
-        <div className="preview-stage" data-bg={stageBg}>
+        {/* meta.stage = สไตล์เสริมของเวทีต่อ variant (ดู lab/registry.js)
+            มีไว้ให้ variant ที่กางขึ้นบนหรือคลุมเต็มเวทีขอที่ว่างได้ตามจริง
+            แทนการแฮ็ก margin ในตัว variant เอง ซึ่งทำให้การ์ดสูงผิดเพื่อนทั้งที่ยังไม่ได้กด */}
+        <div className="preview-stage" data-bg={stageBg} style={variant.stage}>
           <Component
             size={size}
             disabled={state === 'disabled'}

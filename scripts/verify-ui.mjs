@@ -95,6 +95,91 @@ await page.goto(`${BASE}/showcase/tech/login`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(400);
 check('app bar hidden on login', (await page.locator('[data-theme] header nav').count()) === 0);
 
+// ---------- เมนูแจ้งเตือนและโปรไฟล์บน AppBar ต้องกดได้ทุกธีม ----------
+for (const theme of THEMES) {
+  await page.goto(`${BASE}/showcase/${theme}/subjects?lang=en`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(600);
+
+  const triggers = page.locator('[data-theme] header button[aria-haspopup="menu"]');
+  const bell = triggers.first();
+  const avatar = triggers.last();
+
+  await bell.click();
+  await page.waitForTimeout(400);
+  const notif = page.getByRole('menu', { name: 'Notifications' });
+  check(`${theme}: notification menu opens`, await notif.isVisible());
+
+  // ---------- แผงลอยต้องทึบและอ่านออก ----------
+  // เคยพลาดมาแล้ว: tech ตั้ง --ui-card-bg โปร่ง 95% แล้วฝากความอ่านออกไว้กับ backdrop-filter
+  // พอ .ui-menu ไปอยู่ใน .ui-panel ของ AppBar ซึ่งเป็น backdrop root อยู่ก่อนแล้ว
+  // เบลอชั้นในเลยไม่มีอะไรให้ดูด กลายเป็นแผงใสทับเนื้อหาหน้าเว็บจนอ่านไม่ออก
+  const opaque = await page.evaluate(() => {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 1;
+    const cx = cv.getContext('2d', { willReadFrequently: true });
+    // ต้อง rasterize เพราะ Chromium คืนค่าสีที่คำนวณแล้วเป็น oklch() ซึ่งอ่านตรงๆ ไม่ได้
+    const px = (s) => {
+      cx.clearRect(0, 0, 1, 1);
+      cx.fillStyle = s.trim();
+      cx.fillRect(0, 0, 1, 1);
+      const d = cx.getImageData(0, 0, 1, 1).data;
+      const a = d[3] / 255;
+      return { rgb: a === 0 ? [0, 0, 0] : [d[0] / a, d[1] / a, d[2] / a], a };
+    };
+    const over = (fg, bg) => fg.rgb.map((c, i) => c * fg.a + bg[i] * (1 - fg.a));
+    const lum = ([r, g, b]) => {
+      const f = (c) => {
+        const s = c / 255;
+        return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+      };
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+    };
+    const ratio = (a, b) => {
+      const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    // ΔL* ของ CIE ตรงกับ "ตาเห็นต่างแค่ไหน" มากกว่าอัตราส่วน contrast เมื่อสองสีใกล้กันมาก
+    const lstar = (c) => 116 * Math.cbrt(lum(c)) - 16;
+
+    const menu = document.querySelector('[data-theme] [role="menu"]');
+    const cs = getComputedStyle(menu);
+    const bg = px(cs.backgroundColor);
+    const row = menu.querySelector('button[role="menuitem"]');
+    const rs = getComputedStyle(row);
+
+    return {
+      alpha: bg.a,
+      backdrop: cs.backdropFilter,
+      text: ratio(over(px(rs.color), bg.rgb), bg.rgb),
+      hover: Math.abs(
+        lstar(over(px(rs.getPropertyValue('--color-surface-2')), bg.rgb)) - lstar(bg.rgb),
+      ),
+    };
+  });
+  check(`${theme}: menu surface is opaque (alpha ${opaque.alpha.toFixed(2)} = 1)`, opaque.alpha === 1);
+  check(`${theme}: menu never leans on backdrop blur (${opaque.backdrop})`, opaque.backdrop === 'none');
+  check(`${theme}: menu text readable (${opaque.text.toFixed(2)}:1 ≥ 4.5)`, opaque.text >= 4.5);
+  check(`${theme}: menu row hover visible (ΔL* ${opaque.hover.toFixed(1)} ≥ 2.5)`, opaque.hover >= 2.5);
+
+  // กด "อ่านทั้งหมด" แล้วตัวเลขบนกระดิ่งต้องหายไปจริง
+  const before = await bell.innerText();
+  await page.getByRole('button', { name: 'Mark all read' }).click();
+  await page.waitForTimeout(300);
+  check(`${theme}: mark-all-read clears the badge`, (await bell.innerText()) !== before);
+
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(350);
+  check(`${theme}: Escape closes notification menu`, !(await notif.isVisible()));
+
+  await avatar.click();
+  await page.waitForTimeout(400);
+  const prof = page.getByRole('menu', { name: 'Account menu' });
+  check(`${theme}: profile menu opens`, await prof.isVisible());
+  await page.mouse.click(400, 700);
+  await page.waitForTimeout(350);
+  check(`${theme}: outside click closes profile menu`, !(await prof.isVisible()));
+}
+
 // ---------- ขอบ/เงาต้องไม่โดนกล่องที่เลื่อนได้ตัด ----------
 for (const theme of THEMES) {
   await page.goto(`${BASE}/showcase/${theme}/lesson`, { waitUntil: 'networkidle' });
@@ -208,6 +293,136 @@ for (const group of [
   // เจาะจง id ของ VariantCard เพราะ variant บางตัว (เช่นการ์ด) เรนเดอร์ <article> ของตัวเองซ้อนอยู่ข้างใน
   const n = await page.locator('article[id^="variant-"]').count();
   check(`lab/${group} has variants (${n})`, n > 0);
+}
+
+// ---------- Lab: แผงที่กางออกต้องไม่โดนการ์ดตัด และต้องอยู่บนสุด ----------
+// การ์ดเคยตั้ง overflow-hidden ไว้กันมุมเหลี่ยมของเวที ผลข้างเคียงคือดรอปดาวน์โดนตัดหมด
+// และเพราะ ThemeFrame ตั้ง isolate การ์ดที่มาทีหลังใน DOM จะวาดทับแผงของการ์ดก่อนหน้า
+await page.goto(`${BASE}/lab/dropdowns`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(500);
+const ddCards = page.locator('article[id^="variant-"]');
+for (let i = 0; i < (await ddCards.count()); i++) {
+  const card = ddCards.nth(i);
+  const id = await card.getAttribute('id');
+  // จัดการ์ดไว้กลางจอก่อน ไม่งั้น Playwright เลื่อนปุ่มมาชิดขอบล่าง
+  // แล้วแผงที่กางลงมาจะตกนอกวิวพอร์ต ทำให้ elementFromPoint คืน null (บวกลบไม่เกี่ยวกับบั๊ก)
+  await card.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(150);
+  await card.locator('.preview-stage button').first().click();
+  await page.waitForTimeout(450);
+
+  const r = await card.evaluate((art) => {
+    const panel = art.querySelector('.preview-stage [data-open="true"]');
+    if (!panel) return null;
+    const b = panel.getBoundingClientRect();
+    // ยิงจุดที่ "ล่างสุดของแผง" เพราะนั่นคือจุดแรกที่โดนตัดหรือโดนการ์ดถัดไปทับ
+    const y = Math.min(b.bottom - 6, window.innerHeight - 2);
+    const hit = document.elementFromPoint(b.left + b.width / 2, y);
+    return {
+      overflow: getComputedStyle(art).overflow,
+      // ล้นพ้นขอบล่างของการ์ดจริงไหม ถ้าไม่ล้น การทดสอบทับซ้อนก็ไม่มีความหมาย
+      spill: Math.round(b.bottom - art.getBoundingClientRect().bottom),
+      onTop: Boolean(hit && panel.contains(hit)),
+    };
+  });
+  if (!r) continue;
+
+  check(`lab/${id}: card never clips (overflow ${r.overflow})`, r.overflow === 'visible');
+  check(`lab/${id}: open panel is hit-testable on top`, r.onTop);
+
+  // ต้องปิดให้สนิทก่อนไปใบถัดไป ไม่งั้นแผงที่ยังกางอยู่จะบังปุ่มของใบข้างๆ (ซึ่งตอนนี้ทำได้แล้ว)
+  // Escape สำหรับตัวที่ดักคีย์เอง (คอมมานด์พาเลตต์) · blur สำหรับตัวที่ปิดด้วย onBlur
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => document.activeElement?.blur());
+  await page.waitForTimeout(350);
+}
+// ---------- แผงที่กว้างกว่าการ์ดต้องเห็นครบ "ทั้งสองข้าง" ทุกความกว้างจอ ----------
+// เคยพลาดสองชั้น: (1) ตั้ง overflow-x: clip คู่กับ overflow-y: visible แล้ว Chromium
+// ไม่สนใจ overflow-clip-margin เลย  (2) ขึ้น 3 คอลัมน์เร็วเกินไปจนการ์ดแคบกว่าแผง
+// แผงจึงยื่นพ้นขอบจอ ตัวจอเองเลยกลายเป็นตัวตัด ซึ่งแก้ที่ CSS ของกริดไม่ได้
+for (const w of [1920, 1536, 1440, 1280, 1024, 768, 640]) {
+  await page.setViewportSize({ width: w, height: 900 });
+  await page.goto(`${BASE}/lab/dropdowns`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(400);
+  const mega = page.locator('#variant-dd-mega-panel');
+  await mega.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  await mega.locator('.preview-stage button').first().click();
+  await page.waitForTimeout(550);
+  const wide = await page.evaluate(() => {
+    const el = document.querySelector('.v-mega');
+    const b = el.getBoundingClientRect();
+    const at = (x, y) => {
+      const h = document.elementFromPoint(x, y);
+      return Boolean(h && el.contains(h));
+    };
+    return {
+      left: at(b.left + 3, b.top + b.height / 2),
+      right: at(b.right - 3, b.top + b.height / 2),
+      scrollbar: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    };
+  });
+  check(`lab@${w}: wide panel shows both edges`, wide.left && wide.right);
+  check(`lab@${w}: wide panel adds no page scrollbar`, !wide.scrollbar);
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => document.activeElement?.blur());
+}
+await page.setViewportSize({ width: 1600, height: 1000 });
+
+// มุมบนของเวทีต้องมนตามการ์ด และต้องเป็น "ความมนของสตูดิโอ" ไม่ใช่ของธีมที่กำลังพรีวิว
+const corner = await page.evaluate(() => {
+  const art = document.querySelector('article[id^="variant-"]');
+  const frame = art.querySelector(':scope > [data-theme]');
+  return {
+    card: getComputedStyle(art).borderTopLeftRadius,
+    top: getComputedStyle(frame).borderTopLeftRadius,
+    bottom: getComputedStyle(frame).borderBottomLeftRadius,
+  };
+});
+check(`lab: stage top corner matches the card (${corner.top} = ${corner.card})`, corner.top === corner.card);
+check(`lab: stage bottom corner is square (${corner.bottom})`, corner.bottom === '0px');
+
+// ฉากคลุมของคอมมานด์พาเลตต์ต้องเท่ากับเวที — เดิมอ้างกับตัวห่อขนาดปุ่ม 240×44 แล้วแผงหลุดออกทั้งใบ
+await page.locator('#variant-dd-command-palette .preview-stage button').first().click();
+await page.waitForTimeout(450);
+const scrim = await page.evaluate(() => {
+  const stage = document.querySelector('#variant-dd-command-palette .preview-stage');
+  const o = stage.querySelector('.v-cmd-overlay').getBoundingClientRect();
+  const s = stage.getBoundingClientRect();
+  const panel = stage.querySelector('.v-cmd-panel').getBoundingClientRect();
+  return {
+    dw: Math.abs(o.width - s.width),
+    dh: Math.abs(o.height - s.height),
+    room: Math.round(o.bottom - panel.bottom),
+  };
+});
+check(`lab: palette scrim covers the stage (off by ${scrim.dw}×${scrim.dh}px ≤ 1)`, scrim.dw <= 1 && scrim.dh <= 1);
+check(`lab: palette panel fits inside the scrim (${scrim.room}px ≥ 0)`, scrim.room >= 0);
+await page.keyboard.press('Escape');
+await page.waitForTimeout(350);
+
+// ---------- Lab: ปุ่มลอยกางเมนูต้องขอที่ว่างผ่าน meta.stage ไม่ใช่แฮ็ก margin ----------
+for (const size of ['sm', 'md', 'lg']) {
+  await page.goto(`${BASE}/lab/iconbuttons`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(400);
+  await page.getByRole('button', { name: size.toUpperCase(), exact: true }).click();
+  await page.waitForTimeout(250);
+  check(
+    `lab/${size}: FAB speed dial no longer uses a margin hack`,
+    (await page.evaluate(
+      () => getComputedStyle(document.querySelector('#variant-ib-fab-speed-dial .v-fab-wrap')).marginTop,
+    )) === '0px',
+  );
+  // เจาะจงในเวที เพราะปุ่ม "ดูโค้ด" ของการ์ดก็มี aria-expanded เหมือนกัน
+  await page.locator('#variant-ib-fab-speed-dial .preview-stage button[aria-expanded]').click();
+  await page.waitForTimeout(700);
+  const fab = await page.evaluate(() => {
+    const stage = document.querySelector('#variant-ib-fab-speed-dial .preview-stage');
+    const items = [...stage.querySelectorAll('.v-fab-item')];
+    return Math.round(
+      Math.min(...items.map((i) => i.getBoundingClientRect().top)) - stage.getBoundingClientRect().top,
+    );
+  });
+  check(`lab/${size}: FAB items stay inside their stage (${fab}px ≥ 0)`, fab >= 0);
 }
 
 // ---------- ช่องกรอกและช่องติ๊กต้องมองเห็นได้ทุกธีม ----------

@@ -115,7 +115,10 @@ export function LabPage() {
               <p className="mt-3 text-muted">{t('lab.empty')}</p>
             </div>
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            // จำนวนคอลัมน์ผูกกับ "การ์ดกว้างพอจะโชว์คอมโพเนนต์ที่กว้างที่สุดไหม" ไม่ใช่แค่จอกว้างพอ
+            // แผงใหญ่สองคอลัมน์กว้าง 24rem ถ้าขึ้น 3 คอลัมน์ตั้งแต่ xl การ์ดจะเหลือ ~283px
+            // แล้วแผงจะยื่นพ้นขอบจอจนโดนตัด จึงเลื่อนไปขึ้น 3 คอลัมน์ที่ 2xl และ 2 คอลัมน์ที่ md
+            <div className="lab-grid grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
               {items.map((variant) => (
                 <VariantCard
                   key={variant.id}

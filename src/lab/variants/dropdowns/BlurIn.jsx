@@ -10,7 +10,11 @@ export const meta = {
 export const css = `
 .v-dd-blur {
   display: block;
-  background: var(--ui-card-bg);
+  /* แผงลอยใช้ --ui-menu-bg ไม่ใช่ --ui-card-bg เพราะมันลอยทับ "เนื้อหา" จึงต้องทึบเสมอ
+     ต่างจากการ์ดที่นอนบนพื้นหลังนิ่ง จะโปร่งแสงเป็นกระจกก็ได้
+     ค่าสำรองใน var() บังคับต้องมี — ธีมที่ไม่ได้นิยาม --ui-menu-bg จะตกมาใช้พื้นการ์ดแทน
+     โค้ดนี้จึงคัดลอกไปใช้ในโปรเจคที่ไม่มี token ตัวนี้ได้ทันที */
+  background: var(--ui-menu-bg, var(--ui-card-bg));
   border: var(--ui-border-width) solid var(--color-border);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-raised);

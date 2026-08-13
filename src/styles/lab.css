@@ -8,11 +8,18 @@
 
 /* ฉากพรีวิว — สลับพื้นหลังโปร่ง/ทึบเพื่อดูเงาและขอบได้ชัด */
 .preview-stage {
+  /* เป็นกรอบอ้างอิงให้ variant ที่ทำฉากคลุมเต็มเวที (เช่น command palette)
+     ใช้ inset: 0 แล้วอ้างกับ "เวที" ได้ตรงๆ ไม่ต้องมี wrapper ที่ตั้ง relative เอง
+     ซึ่งจะกลายเป็นกล่องขนาดปุ่มแล้วฉากคลุมผิดขนาดทั้งหมด */
+  position: relative;
   display: grid;
   place-items: center;
   min-height: 8.5rem;
   padding: 1.5rem;
-  border-radius: var(--radius-card);
+  /* inherit ไม่ใช่ var(--radius-card) — เวทีอยู่ใน [data-theme] ตัวแปรตรงนี้จึงเป็น
+     ความมนของ "ธีมที่กำลังพรีวิว" ไม่ใช่ของการ์ดสตูดิโอที่ครอบอยู่ สองค่านี้ไม่เท่ากัน
+     (edura 0.375rem vs สตูดิโอ 0.75rem) มุมจึงเหลื่อมกันเป็นเสี้ยว */
+  border-radius: inherit;
 }
 .preview-stage[data-bg='checker'] {
   background-image:
@@ -22,6 +29,50 @@
     linear-gradient(-45deg, transparent 75%, oklch(50% 0 0 / 0.14) 75%);
   background-size: 16px 16px;
   background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+
+/* ============================================================
+   การ์ด variant
+   ------------------------------------------------------------
+   ห้ามใช้ overflow: hidden ที่การ์ด — ดรอปดาวน์ ทูลทิป และ FAB ต้องกางออกนอกการ์ดได้
+   ของที่กางออกเป็น position: absolute จึงอยู่นอก flow ไม่ดันการ์ดให้สูงตาม
+   overflow: hidden เดิมมีไว้กันมุมเหลี่ยมของเวทีโผล่พ้นมุมมนการ์ดเท่านั้น
+   จึงแก้ด้วยการมนเฉพาะสองมุมบนของเวทีแทน ได้ผลเดียวกันโดยไม่ตัดอะไรเลย
+   ============================================================ */
+.lab-card > [data-theme] {
+  border-radius: inherit;
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+/* กันไว้เผื่อบล็อกสุดท้ายของการ์ดมีพื้นหลังเป็นของตัวเองในอนาคต */
+.lab-card > :last-child {
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
+}
+
+/* การ์ดที่กำลังกางอะไรอยู่ต้องวาดทับเพื่อนบ้าน
+   ThemeFrame ตั้ง isolate ไว้ เวทีของทุกการ์ดจึงถูกวาดในรอบ "ลูกที่มีตำแหน่ง"
+   เรียงตามลำดับ DOM การ์ดที่มาทีหลังจึงทับแผงของการ์ดก่อนหน้าเสมอ
+
+   z-index: 1 เท่านั้น ห้ามมากกว่านี้ — TopBar ของสตูดิโอเป็น sticky z-30
+   และอยู่ก่อนกริดใน DOM ถ้าการ์ดขึ้นไปถึง 30 มันจะวาดทับแถบบนตอนเลื่อนหน้า */
+.lab-card:hover,
+.lab-card:focus-within,
+.lab-card:has([data-open='true']) {
+  position: relative;
+  z-index: 1;
+}
+
+/* แผงบางตัวกว้างกว่าการ์ด (Mega Panel 24rem) ถ้าปล่อยล้นอิสระจะดันให้ทั้งหน้าเลื่อนแนวนอน
+   overflow: clip ตัดโดยไม่สร้างกล่องเลื่อน แล้ว clip-margin เผื่อที่ให้ล้นออกไปได้ 24rem ก่อนโดนตัด
+   ซึ่งกว้างและสูงกว่าแผงทุกตัวในคลัง ของที่กางออกจึงเห็นครบ แต่หน้าเว็บไม่มีแถบเลื่อนแนวนอน
+
+   ต้องตั้ง clip "ทั้งสองแกน" — Chromium จะไม่สนใจ overflow-clip-margin เลย
+   ถ้าอีกแกนเป็น visible (computed style ยังโชว์ค่าให้เห็นอยู่ แต่ไม่มีผลจริง)
+   เคยพลาดตรงนี้มาแล้ว: ตั้ง overflow-x: clip + overflow-y: visible แล้ว Mega Panel โดนตัดข้าง */
+.lab-grid {
+  overflow: clip;
+  overflow-clip-margin: 24rem;
 }
 
 /* บล็อกโค้ด */

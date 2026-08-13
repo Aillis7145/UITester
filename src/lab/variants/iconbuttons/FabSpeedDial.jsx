@@ -5,6 +5,9 @@ export const meta = {
   group: 'iconbuttons',
   name: { th: 'ปุ่มลอยกางเมนู', en: 'FAB Speed Dial' },
   tags: ['fab', 'stagger', 'mobile'],
+  // ลูกๆ พุ่งขึ้นบนสูงสุด ~8.6rem จากขอบบนของปุ่ม (ขนาด lg) จึงจองที่ว่างไว้ในเวทีเอง
+  // แล้วดันเนื้อหาไปชิดล่าง — เวทีตั้ง place-items: center ไว้ ทับเฉพาะแกนตั้งก็พอ
+  stage: { minHeight: '16rem', alignItems: 'end' },
 };
 
 export const css = `
@@ -30,7 +33,7 @@ export const css = `
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: var(--ui-card-bg);
+  background: var(--ui-menu-bg, var(--ui-card-bg));
   color: var(--color-text);
   border: var(--ui-border-width) solid var(--color-border);
   box-shadow: var(--shadow-raised);
@@ -75,7 +78,7 @@ export default function FabSpeedDial({ size = 'md', disabled }) {
     <div
       className="v-fab-wrap"
       data-open={open}
-      style={{ height: s.fab, marginTop: '10rem' }}
+      style={{ height: s.fab }}
       onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setOpen(false)}
     >
       {ITEMS.map((item, i) => (

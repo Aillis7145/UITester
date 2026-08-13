@@ -12,7 +12,7 @@ export const css = `
   display: block;
   width: 15rem;
   transform-origin: top right;
-  background: var(--ui-card-bg);
+  background: var(--ui-menu-bg, var(--ui-card-bg));
   border: var(--ui-border-width) solid var(--color-border);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-raised);

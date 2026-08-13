@@ -87,12 +87,16 @@
      ทำให้ทั้งเข้าและออกเป็นอนิเมชั่นได้ด้วย CSS ล้วน โดยไม่ต้องมี JS จับเวลา */
   .ui-menu {
     display: block;
-    background: var(--ui-card-bg);
+    /* ค่าสำรองบังคับต้องมี — ถ้า --ui-menu-bg เป็น initial แล้วเขียน var() เปล่า
+       ทั้ง declaration จะกลายเป็น invalid แล้วพื้นหลังจะหายไปเลย */
+    background: var(--ui-menu-bg, var(--ui-card-bg));
     border: var(--ui-border-width) solid var(--color-border);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-raised);
-    -webkit-backdrop-filter: var(--ui-backdrop);
-    backdrop-filter: var(--ui-backdrop);
+    /* ไม่มี backdrop-filter โดยตั้งใจ
+       พื้นทึบอยู่แล้วจึงไม่มีอะไรให้เบลอ และที่สำคัญกว่านั้น แผงลอยมักถูกวางซ้อน
+       อยู่ใน .ui-panel/.ui-surface ที่มี backdrop-filter อยู่แล้ว (เช่น AppBar)
+       ตัวแม่จึงกลายเป็น backdrop root แล้วเบลอชั้นในไม่มีอะไรให้ดูดตั้งแต่แรก */
 
     opacity: 1;
     translate: 0 0;

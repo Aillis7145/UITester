@@ -6,6 +6,13 @@
  *   2. query: '?raw'   → โค้ดที่แสดงคือ "ซอร์สจริงของไฟล์นั้น"
  *                        จึงไม่มีทางที่โค้ดที่คัดลอกไปจะไม่ตรงกับที่เห็นบนจอ
  */
+/**
+ * ฟิลด์ที่ meta ของ variant ใส่ได้: id · group · name · tags
+ * และ stage (ไม่บังคับ) = object สไตล์ที่ VariantCard จะวางบน .preview-stage ตรงๆ
+ *   เช่น { minHeight: '15.5rem', alignItems: 'end' } สำหรับตัวที่กางขึ้นด้านบน
+ * ใส่ได้เฉพาะคีย์เรื่องขนาด/การจัดวาง — เป็น inline style จึงชนะกฎของ .preview-stage ทุกข้อ
+ * ถ้าเผลอใส่ borderRadius มุมการ์ดจะกลับไปเหลี่ยม
+ */
 const mods = import.meta.glob('./variants/*/*.jsx', { eager: true });
 const srcs = import.meta.glob('./variants/*/*.jsx', {
   eager: true,
