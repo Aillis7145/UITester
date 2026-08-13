@@ -5,6 +5,7 @@ import { isThemeId, THEMES } from '@/theme/themes';
 import { ThemeFrame } from '@/theme/ThemeFrame';
 import { SCREENS, PAGE_IDS, PAGE_ICONS, isPageId } from '@/screens';
 import { ScreenStateProvider } from '@/screens/screenState';
+import { AppRouteProvider } from '@/screens/appRoute';
 import { AppShell } from '@/screens/AppShell';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { ThemeSpec } from './ThemeSpec';
@@ -67,9 +68,19 @@ export function ShowcasePage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [full]);
 
+  /**
+   * ย้ายหน้า/ธีม โดยทับ query ทีละคีย์ (ค่า null = ลบทิ้ง)
+   * ?lang กับ ?live3d จึงรอดทุกครั้งโดยที่ goto ไม่ต้องรู้จักมัน
+   * และ ?project / ?node ก็อยู่ต่อเวลาสลับธีม ผู้ใช้จึงไม่หลุดจากตำแหน่งที่กำลังดู
+   */
   const goto = useCallback(
-    (nextTheme, nextPage) => {
-      const qs = sp.toString();
+    (nextTheme, nextPage, params) => {
+      const next = new URLSearchParams(sp);
+      for (const [k, v] of Object.entries(params ?? {})) {
+        if (v == null) next.delete(k);
+        else next.set(k, v);
+      }
+      const qs = next.toString();
       navigate(`/showcase/${nextTheme}/${nextPage}${qs ? `?${qs}` : ''}`);
     },
     [navigate, sp],
@@ -81,6 +92,8 @@ export function ShowcasePage() {
 
   const Screen = SCREENS[pageId];
   const theme = THEMES[themeId];
+  // หน้าจอส่งได้ทั้ง onNavigate('quiz') เฉยๆ และ onNavigate('browse', { node: id })
+  const nav = (next, params) => goto(themeId, next, params);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -178,9 +191,11 @@ export function ShowcasePage() {
             style={{ '--frame-h': `${frameHeight}px` }}
           >
             <ScreenStateProvider value={state}>
-              <AppShell pageId={pageId} onNavigate={(next) => goto(themeId, next)}>
-                <Screen onNavigate={(next) => goto(themeId, next)} />
-              </AppShell>
+              <AppRouteProvider pageId={pageId} projectId={sp.get('project')} nodeId={sp.get('node')}>
+                <AppShell pageId={pageId} onNavigate={nav}>
+                  <Screen onNavigate={nav} />
+                </AppShell>
+              </AppRouteProvider>
             </ScreenStateProvider>
           </ThemeFrame>
         </DeviceFrame>
@@ -194,9 +209,11 @@ export function ShowcasePage() {
           themeId={themeId}
           pageId={pageId}
           onClose={() => setFull(false)}
-          onNavigate={(next) => goto(themeId, next)}
+          onNavigate={nav}
           state={state}
           Screen={Screen}
+          projectId={sp.get('project')}
+          nodeId={sp.get('node')}
         />
       )}
     </div>
@@ -208,7 +225,7 @@ export function ShowcasePage() {
  * ปุ่มปิดวางบนเลเยอร์ของสตูดิโอ (สีกลาง) ไม่ใช่ของธีม
  * เพื่อให้หาเจอเสมอไม่ว่าธีมข้างล่างจะสว่างหรือมืด
  */
-function FullscreenView({ themeId, pageId, onClose, onNavigate, state, Screen }) {
+function FullscreenView({ themeId, pageId, onClose, onNavigate, state, Screen, projectId, nodeId }) {
   const { t } = useI18n();
 
   return (
@@ -220,9 +237,11 @@ function FullscreenView({ themeId, pageId, onClose, onNavigate, state, Screen })
         style={{ '--frame-h': '100dvh' }}
       >
         <ScreenStateProvider value={state}>
-          <AppShell pageId={pageId} onNavigate={onNavigate}>
-            <Screen onNavigate={onNavigate} />
-          </AppShell>
+          <AppRouteProvider pageId={pageId} projectId={projectId} nodeId={nodeId}>
+            <AppShell pageId={pageId} onNavigate={onNavigate}>
+              <Screen onNavigate={onNavigate} />
+            </AppShell>
+          </AppRouteProvider>
         </ScreenStateProvider>
       </ThemeFrame>
 

@@ -1,5 +1,6 @@
 import { useI18n } from '@/i18n/I18nProvider';
 import { splitMinutes } from '@/mock/data';
+import { contentCountOf, progressOf } from '@/mock/nodes';
 import { Badge } from '@/components/Badge';
 import { Icon } from '@/components/Icon';
 import { ProgressBar } from '@/components/ProgressBar';
@@ -12,10 +13,14 @@ import { Avatar } from '@/components/Avatar';
  * ป้ายบนภาพใช้พื้นทึบของตัวเอง ไม่ใช่ token ของธีม
  * เพราะภาพถ่ายมีสีอะไรก็ได้ ป้ายที่โปร่งใสจะอ่านไม่ออกบนภาพสว่าง
  */
-export function SubjectCard({ subject, onOpen }) {
+export function SubjectCard({ node, onOpen }) {
   const { t, p } = useI18n();
-  const { h, m } = splitMinutes(subject.durationMin);
-  const started = subject.progress > 0;
+  const { h, m } = splitMinutes(node.durationMin);
+  // ความคืบหน้ากับจำนวนสื่อคิดจากต้นไม้จริง ไม่ใช่ตัวเลขที่เขียนติดไว้กับการ์ด
+  // ตัวเลขที่เขียนติดไว้มีโอกาสไม่ตรงกับของจริงเสมอ และเคยไม่ตรงมาแล้ว
+  const progress = progressOf(node.id);
+  const total = contentCountOf(node.id);
+  const started = progress > 0;
 
   return (
     <article
@@ -33,7 +38,7 @@ export function SubjectCard({ subject, onOpen }) {
       {/* ---------- ภาพประกอบ ---------- */}
       <div className="relative aspect-16/10 w-full overflow-hidden bg-surface-2">
         <img
-          src={subject.cover}
+          src={node.cover}
           alt=""
           loading="lazy"
           decoding="async"
@@ -44,8 +49,8 @@ export function SubjectCard({ subject, onOpen }) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/25" />
 
         <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-ui bg-primary px-2.5 py-1 text-xs font-bold text-on-primary shadow-raised">
-          <Icon name={subject.icon} size={13} />
-          {p(subject.level)}
+          <Icon name={node.icon} size={13} />
+          {p(node.difficulty)}
         </span>
 
         <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-ui bg-black/65 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
@@ -55,17 +60,17 @@ export function SubjectCard({ subject, onOpen }) {
 
         <span className="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-ui bg-black/65 px-2 py-1 text-xs font-semibold text-white backdrop-blur-sm">
           <Icon name="star" size={12} />
-          {subject.rating.toFixed(1)}
+          {node.rating.toFixed(1)}
         </span>
       </div>
 
       {/* ---------- เนื้อหา ---------- */}
       <div className="flex flex-1 flex-col p-4">
-        <h3 className="ui-heading line-clamp-2 text-base">{p(subject.title)}</h3>
-        <p className="mt-1.5 line-clamp-2 text-sm text-muted">{p(subject.subtitle)}</p>
+        <h3 className="ui-heading line-clamp-2 text-base">{p(node.title)}</h3>
+        <p className="mt-1.5 line-clamp-2 text-sm text-muted">{p(node.subtitle)}</p>
 
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          {subject.tags.map((tag) => (
+          {node.tags.map((tag) => (
             <Badge key={p(tag)} size="sm">
               {p(tag)}
             </Badge>
@@ -73,13 +78,13 @@ export function SubjectCard({ subject, onOpen }) {
         </div>
 
         <div className="mt-3.5 flex items-center gap-2">
-          <Avatar name={p(subject.instructor)} size="xs" />
+          <Avatar name={p(node.instructor)} size="xs" />
           <span className="min-w-0 flex-1 truncate text-sm text-muted">
-            {p(subject.instructor)}
+            {p(node.instructor)}
           </span>
           <span className="flex shrink-0 items-center gap-1 text-xs text-muted">
             <Icon name="list" size={12} />
-            {subject.lessonCount}
+            {total}
           </span>
         </div>
 
@@ -89,10 +94,10 @@ export function SubjectCard({ subject, onOpen }) {
               <div className="mb-1.5 flex items-center justify-between text-sm">
                 <span className="text-muted">{t('subjects.continueCta')}</span>
                 <span className="font-semibold text-primary-ink">
-                  {Math.round(subject.progress * 100)}%
+                  {Math.round(progress * 100)}%
                 </span>
               </div>
-              <ProgressBar value={subject.progress} size="sm" label={p(subject.title)} />
+              <ProgressBar value={progress} size="sm" label={p(node.title)} />
             </>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-ink">

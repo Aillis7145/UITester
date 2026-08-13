@@ -1,3 +1,4 @@
+import { CHROMELESS_PAGES } from './pages';
 import { AppBar } from './parts/AppBar';
 
 /**
@@ -7,7 +8,8 @@ import { AppBar } from './parts/AppBar';
  * ใช้ร่วมกันทั้ง ShowcasePage และ EmbedPage จึงไม่มีทางแสดงผลต่างกัน
  */
 export function AppShell({ pageId, onNavigate, children }) {
-  const showBar = pageId !== 'login';
+  // ประตูทางเข้า (ล็อกอิน เลือกโครงการ) ยังไม่มีเมนู เพราะผู้ใช้ยังไม่ได้อยู่ในคอร์สไหน
+  const showBar = !CHROMELESS_PAGES.includes(pageId);
 
   return (
     <div className="flex min-h-full flex-col">

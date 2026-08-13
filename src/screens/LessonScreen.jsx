@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useScreenState } from './screenState';
-import {
-  getLesson,
-  getSection,
-  getSubject,
-  currentLessonId,
-  currentLessonProgressSec,
-} from '@/mock/data';
-import { VideoPlayerMock } from './parts/VideoPlayerMock';
+import { useAppRoute } from './appRoute';
+import { crumbsFor, targetFor } from './nav';
+import { currentLessonProgressSec } from '@/mock/data';
+import { getNode, childrenOf, siblingsOf, courseOf } from '@/mock/nodes';
+import { ContentStage } from './parts/ContentStage';
 import { PlaylistPanel } from './parts/PlaylistPanel';
 import { LessonTabs } from './parts/LessonTabs';
 import { Avatar } from '@/components/Avatar';
+import { Breadcrumb } from '@/components/Breadcrumb';
 import { Badge } from '@/components/Badge';
 import { Icon } from '@/components/Icon';
 import { Skeleton } from '@/components/Skeleton';
@@ -21,13 +19,18 @@ export function LessonScreen({ onNavigate }) {
   const { t, p } = useI18n();
   const { showSkeleton } = useScreenState();
 
-  const [activeId, setActiveId] = useState(currentLessonId);
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const lesson = getLesson(activeId) ?? getLesson(currentLessonId);
-  const section = getSection(lesson.sectionId);
-  const subject = getSubject(lesson.subjectId);
+  // ตำแหน่งมาจาก URL ไม่ใช่ useState — deep link จึงตรงกับสิ่งที่เห็นจริง
+  // และภาพในโหมดเทียบข้างกับภาพถ่ายอัตโนมัติได้ผลเหมือนกันทุกครั้ง
+  const { project, node: content } = useAppRoute();
+  const parent = getNode(content.parentId);
+  const course = courseOf(content.id);
+
+  // เพลย์ลิสต์ = พี่น้องของสื่อชิ้นนี้ จัดกลุ่มตามพี่น้องของกล่องแม่
+  // โครงการที่ตื้นกว่าจึงยุบเหลือกลุ่มน้อยลงเองโดยไม่ต้องมีเงื่อนไขไหนรู้ความลึก
+  const groups = siblingsOf(parent.id).map((g) => ({ node: g, items: childrenOf(g.id) }));
 
   if (showSkeleton) return <LessonSkeleton />;
 
@@ -36,35 +39,25 @@ export function LessonScreen({ onNavigate }) {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         {/* ---------- คอลัมน์ซ้าย ---------- */}
         <div className="min-w-0 space-y-5">
-          <VideoPlayerMock lesson={lesson} hue={subject.hue} startSec={currentLessonProgressSec} />
+          <ContentStage node={content} hue={course.hue} startSec={currentLessonProgressSec} />
 
           <div>
-            {/* เส้นทาง */}
-            <nav aria-label="breadcrumb">
-              <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted">
-                <li className="max-w-50 truncate">{p(subject.title)}</li>
-                <li aria-hidden="true">
-                  <Icon name="chevronRight" size={14} />
-                </li>
-                <li className="max-w-50 truncate">{p(section.title)}</li>
-                <li aria-hidden="true">
-                  <Icon name="chevronRight" size={14} />
-                </li>
-                <li className="font-medium text-text">#{lesson.order}</li>
-              </ol>
-            </nav>
+            {/* เส้นทาง — อยู่ในคอลัมน์ซ้ายใต้วิดีโอโดยตั้งใจ ห้ามย้ายขึ้นไปเหนือกริด
+                เพราะ PlaylistPanel คำนวณความสูงจาก calc(var(--frame-h) - 8rem)
+                ถ้าดันแถวนี้ขึ้นไป ปุ่มทำแบบทดสอบท้ายเพลย์ลิสต์จะตกนอกกรอบเครื่อง */}
+            <Breadcrumb items={crumbsFor({ project, node: content, onNavigate, p })} />
 
-            <h1 className="ui-heading mt-2.5 text-2xl sm:text-3xl">{p(lesson.title)}</h1>
+            <h1 className="ui-heading mt-2.5 text-2xl sm:text-3xl">{p(content.title)}</h1>
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <Avatar name={p(subject.instructor)} size="sm" />
+                <Avatar name={p(course.instructor)} size="sm" />
                 <div>
-                  <p className="text-sm font-semibold">{p(subject.instructor)}</p>
+                  <p className="text-sm font-semibold">{p(course.instructor)}</p>
                   <p className="text-xs text-muted">{t('lesson.instructor')}</p>
                 </div>
                 <Badge tone="primary" size="sm" className="ml-1">
-                  {p(subject.level)}
+                  {p(course.difficulty)}
                 </Badge>
               </div>
 
@@ -94,8 +87,10 @@ export function LessonScreen({ onNavigate }) {
         {/* ---------- คอลัมน์ขวา ---------- */}
         <aside className="min-w-0">
           <PlaylistPanel
-            currentId={activeId}
-            onSelect={setActiveId}
+            groups={groups}
+            currentId={content.id}
+            title={p(parent.title)}
+            onSelect={(n) => onNavigate?.(...targetFor(n))}
             onTakeQuiz={() => onNavigate?.('quiz')}
           />
         </aside>

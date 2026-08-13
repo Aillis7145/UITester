@@ -17,7 +17,9 @@ const THEMES = fs
   .readdirSync('src/styles/themes')
   .filter((f) => f.endsWith('.css'))
   .map((f) => f.replace(/\.css$/, ''));
-const PAGES = ['login', 'subjects', 'lesson', 'quiz', 'results'];
+// อ่านจากทะเบียนจริงของแอป ไม่เขียนรายชื่อซ้ำ — เพิ่มหน้าใหม่แล้วถูกตรวจเองทันที
+// (src/screens/pages.js ตั้งใจไม่ import อะไรเลย จึงโหลดจาก Node ล้วนได้)
+const { PAGE_IDS: PAGES, APP_NAV_IDS } = await import('../src/screens/pages.js');
 
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
@@ -32,6 +34,25 @@ const shot = (n) => page.screenshot({ path: path.join(OUT, `${n}.png`) });
 const check = (label, ok) => {
   if (!ok) failed++;
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}`);
+};
+/**
+ * เทียบเฉพาะ pathname เสมอ ห้ามใช้ url().endsWith()
+ * เพราะ goto เก็บ query ไว้ให้ (?lang, ?project, ?node) การเทียบทั้ง URL จึงพังทันที
+ * ที่มีพารามิเตอร์ตัวใดตัวหนึ่งติดมา ซึ่งอ่านเหมือนบั๊กทั้งที่ทำงานถูก
+ */
+const pathOf = () => new URL(page.url()).pathname;
+/**
+ * รอจน element ซ่อนจริง แทนการหน่วงเวลาตายตัวแล้วเดา
+ * ธีม tech มีพื้นหลังสามมิติทำให้เฟรมตก การหน่วง 350ms คงที่จึงตกบ้างไม่ตกบ้าง
+ * ซึ่งอ่านเหมือนบั๊กทั้งที่แอปทำงานถูก
+ */
+const hidden = async (locator, ms = 3000) => {
+  try {
+    await locator.waitFor({ state: 'hidden', timeout: ms });
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 // ---------- ทุกธีม × ทุกหน้า ----------
@@ -66,31 +87,34 @@ await page.waitForTimeout(400);
 check('dropdown opens', await page.getByRole('listbox').isVisible());
 await page.getByRole('option', { name: /ยอดนิยม/ }).click();
 check('dropdown selection applied', (await page.getByRole('combobox').innerText()).includes('ยอดนิยม'));
-await page.getByPlaceholder(/ค้นหาวิชา/).fill('zzzzzz');
+await page.getByPlaceholder(/ค้นหา/).fill('zzzzzz');
 await page.waitForTimeout(300);
-check('empty state renders', await page.getByText('ไม่พบวิชาที่ค้นหา').isVisible());
+check('empty state renders', await page.getByText('ไม่พบรายการที่ค้นหา').isVisible());
 
 // ---------- สลับธีม/หน้าโดยคงอีกแกนไว้ ----------
 await page.goto(`${BASE}/showcase/school/quiz`, { waitUntil: 'networkidle' });
 await page.getByRole('button', { name: /นูมอร์ฟิซึม/ }).click();
 await page.waitForTimeout(300);
-check('theme switch keeps page', page.url().endsWith('/showcase/neu/quiz'));
+check('theme switch keeps page', pathOf() === '/showcase/neu/quiz');
 // เจาะจงแถบของสตูดิโอ เพราะ AppBar ในตัวแอปจำลองก็มีปุ่มชื่อเดียวกัน
 await page
   .locator('[role="group"][aria-label="หน้าจอ"] button', { hasText: 'ผลสอบ' })
   .click();
 await page.waitForTimeout(300);
-check('page switch keeps theme', page.url().endsWith('/showcase/neu/results'));
+check('page switch keeps theme', pathOf() === '/showcase/neu/results');
 
 // ---------- AppBar ของตัวแอปจำลอง ----------
 // ต้อง scope ใต้ [data-theme] เพราะ TopBar ของสตูดิโอก็เป็น <header><nav> เหมือนกัน
 await page.goto(`${BASE}/showcase/tech/subjects`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(500);
 const appNav = page.locator('[data-theme] header nav');
-check('app bar shows 4 nav items', (await appNav.locator('button').count()) === 4);
+check(
+  `app bar shows ${APP_NAV_IDS.length} nav items`,
+  (await appNav.locator('button').count()) === APP_NAV_IDS.length,
+);
 await appNav.locator('button', { hasText: 'แบบทดสอบ' }).click();
 await page.waitForTimeout(400);
-check('app bar navigates', page.url().endsWith('/showcase/tech/quiz'));
+check('app bar navigates', pathOf() === '/showcase/tech/quiz');
 await page.goto(`${BASE}/showcase/tech/login`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(400);
 check('app bar hidden on login', (await page.locator('[data-theme] header nav').count()) === 0);
@@ -100,9 +124,12 @@ for (const theme of THEMES) {
   await page.goto(`${BASE}/showcase/${theme}/subjects?lang=en`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(600);
 
-  const triggers = page.locator('[data-theme] header button[aria-haspopup="menu"]');
-  const bell = triggers.first();
-  const avatar = triggers.last();
+  // เลือกด้วยชื่อที่เข้าถึงได้ ไม่ใช่ตำแหน่ง
+  // เพราะ AppBar มีปุ่มเมนูสามตัวแล้ว (โครงการ / แจ้งเตือน / โปรไฟล์)
+  // การใช้ .first()/.last() จะเลื่อนทันทีที่เพิ่มปุ่มใหม่ แล้วทดสอบผิดตัวโดยไม่มีอะไรฟ้อง
+  const header = page.locator('[data-theme] header');
+  const bell = header.getByRole('button', { name: /^Notifications/ });
+  const avatar = header.getByRole('button', { name: 'Account menu' });
 
   await bell.click();
   await page.waitForTimeout(400);
@@ -168,16 +195,99 @@ for (const theme of THEMES) {
   check(`${theme}: mark-all-read clears the badge`, (await bell.innerText()) !== before);
 
   await page.keyboard.press('Escape');
-  await page.waitForTimeout(350);
-  check(`${theme}: Escape closes notification menu`, !(await notif.isVisible()));
+  check(`${theme}: Escape closes notification menu`, await hidden(notif));
 
   await avatar.click();
   await page.waitForTimeout(400);
   const prof = page.getByRole('menu', { name: 'Account menu' });
   check(`${theme}: profile menu opens`, await prof.isVisible());
   await page.mouse.click(400, 700);
-  await page.waitForTimeout(350);
-  check(`${theme}: outside click closes profile menu`, !(await prof.isVisible()));
+  check(`${theme}: outside click closes profile menu`, await hidden(prof));
+}
+
+// ---------- จำนวนหน้าไล่ระดับต้องมาจากข้อมูล ไม่ใช่ค่าตายตัว ----------
+// นี่คือข้อพิสูจน์ของโจทย์หลักทั้งหมด: ค่าคาดหวังอ่านจาก projects.js ซึ่งเป็นไฟล์เดียวกับที่แอปอ่าน
+// ถ้าใครไป hardcode ลำดับหน้าไว้ในหน้าจอ โครงการที่ลึกไม่เท่ากันจะสะดุดทันที
+const { projects } = await import('../src/mock/projects.js');
+
+// ถ้าทุกโครงการลึกเท่ากัน การทดสอบข้างล่างพิสูจน์อะไรไม่ได้เลย จึงต้องกันไว้ก่อน
+check(
+  'demo projects really differ in depth',
+  new Set(projects.map((pr) => pr.levels.length)).size > 1,
+);
+
+for (const project of projects) {
+  await page.goto(`${BASE}/showcase/tech/projects?lang=en`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(400);
+  await page
+    .locator('[data-theme] article[role="button"]', { hasText: project.name.en })
+    .first()
+    .click();
+  await page.waitForTimeout(500);
+  check(`${project.id}: opens its top-level list`, pathOf() === '/showcase/tech/subjects');
+
+  let steps = 0;
+  for (let guard = 0; guard < 10 && !pathOf().endsWith('/lesson'); guard++) {
+    // การ์ดกล่องเป็น article[role="button"] ส่วนแถวสื่ออยู่ในลิสต์ใต้ section
+    // ต้องเจาะจง section เพราะเมนูสลับโครงการบน AppBar ก็เป็น ul li button เหมือนกัน
+    const card = page.locator('[data-theme] article[role="button"]').first();
+    const row = page.locator('[data-theme] section ul li button:not([disabled])').first();
+    await ((await card.count()) ? card : row).click();
+    await page.waitForTimeout(500);
+    if (pathOf().endsWith('/browse')) steps++;
+  }
+  check(
+    `${project.id}: ${steps} drill-down pages = levels.length (${project.levels.length})`,
+    steps === project.levels.length && pathOf().endsWith('/lesson'),
+  );
+
+  // ป้ายชั้นต้องเป็นคำของโครงการนี้จริง ไม่ใช่คำกลางที่ใช้ร่วมกันทุกโครงการ
+  // ถอยกลับหนึ่งครั้งจะได้กล่องชั้นล่างสุด ซึ่งโชว์ชื่อชั้นของตัวเองเป็นหัวเรื่องย่อย
+  await page.goBack();
+  await page.waitForTimeout(500);
+  // เทียบแบบไม่สนตัวพิมพ์ เพราะหัวเรื่องย่อยตั้ง text-transform: uppercase ไว้
+  // และ innerText คืนข้อความ "ที่เรนเดอร์จริง" จึงได้ TOPIC ไม่ใช่ Topic
+  const deepest = project.levels.at(-1).label.en.toUpperCase();
+  const text = (await page.locator('[data-theme]').first().innerText()).toUpperCase();
+  check(`${project.id}: shows its own level label (${deepest})`, text.includes(deepest));
+}
+
+// ---------- ทุกหน้าต้องเรนเดอร์ได้ลำพังโดยไม่มี query ----------
+// สตูดิโอลิงก์ตรงเข้าหน้าไหนก็ได้ และ ?node ที่ผิดต้องไม่ทำให้ redirect
+for (const theme of THEMES) {
+  const before = errors.length;
+  await page.goto(`${BASE}/showcase/${theme}/browse`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(400);
+  const kids = await page.locator('[data-theme] section article, [data-theme] section ul li').count();
+  check(`${theme}: /browse renders standalone (${kids} children, no query)`, kids > 0 && errors.length === before);
+}
+await page.goto(`${BASE}/showcase/tech/browse?node=nope`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(400);
+check('bad ?node falls back instead of redirecting', pathOf() === '/showcase/tech/browse');
+
+// ---------- เพลย์ลิสต์ต้องเป็นของโครงการนั้นจริง ----------
+// เดิม PlaylistPanel import lessons/sections ระดับโมดูลแล้ววนทั้งก้อนโดยไม่กรอง
+// พอมีหลายโครงการ หน้าสื่อของโครงการอื่นจะโชว์บทเรียน AI ทั้งชุด
+// เป็นบั๊กที่ตาไม่จับถ้าไม่ได้เปิดสองโครงการเทียบกัน
+for (const project of projects.filter((pr) => pr.id !== 'p1')) {
+  await page.goto(`${BASE}/showcase/tech/projects?lang=en`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(300);
+  await page
+    .locator('[data-theme] article[role="button"]', { hasText: project.name.en })
+    .first()
+    .click();
+  await page.waitForTimeout(400);
+  for (let guard = 0; guard < 10 && !pathOf().endsWith('/lesson'); guard++) {
+    const card = page.locator('[data-theme] article[role="button"]').first();
+    const row = page.locator('[data-theme] section ul li button:not([disabled])').first();
+    await ((await card.count()) ? card : row).click();
+    await page.waitForTimeout(400);
+  }
+  const aside = await page.locator('[data-theme] aside').innerText();
+  check(
+    `${project.id}: playlist has no content from another project`,
+    !/scikit-learn|Backpropagation|Gradient descent/i.test(aside),
+  );
 }
 
 // ---------- ขอบ/เงาต้องไม่โดนกล่องที่เลื่อนได้ตัด ----------
@@ -241,7 +351,7 @@ await page.goto(`${BASE}/showcase/tech/lesson`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(700);
 check(
   'playlist footer CTA visible in frame',
-  await page.getByRole('button', { name: /ทำแบบทดสอบท้ายบท/ }).isVisible(),
+  await page.getByRole('button', { name: /ทำแบบทดสอบ/ }).isVisible(),
 );
 
 // ---------- โหมดเต็มจอ ----------

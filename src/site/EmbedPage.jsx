@@ -3,6 +3,7 @@ import { isThemeId } from '@/theme/themes';
 import { ThemeFrame } from '@/theme/ThemeFrame';
 import { SCREENS, isPageId } from '@/screens';
 import { ScreenStateProvider, DEFAULT_SCREEN_STATE } from '@/screens/screenState';
+import { AppRouteProvider } from '@/screens/appRoute';
 import { AppShell } from '@/screens/AppShell';
 
 /**
@@ -26,9 +27,13 @@ export function EmbedPage() {
   return (
     <ThemeFrame themeId={themeId} live3d={live3d} scroll className="h-full">
       <ScreenStateProvider value={DEFAULT_SCREEN_STATE}>
-        <AppShell pageId={pageId} onNavigate={() => {}}>
-          <Screen onNavigate={() => {}} />
-        </AppShell>
+        {/* อ่าน ?project / ?node ต่อจากหน้าแม่ ทุกคอลัมน์ในโหมดเทียบจึงอยู่ตำแหน่งเดียวกัน
+            แต่ onNavigate ยังเป็นตัวเปล่า — iframe ต้องกดแล้วไม่เลื่อนหนีกันเอง */}
+        <AppRouteProvider pageId={pageId} projectId={sp.get('project')} nodeId={sp.get('node')}>
+          <AppShell pageId={pageId} onNavigate={() => {}}>
+            <Screen onNavigate={() => {}} />
+          </AppShell>
+        </AppRouteProvider>
       </ScreenStateProvider>
     </ThemeFrame>
   );

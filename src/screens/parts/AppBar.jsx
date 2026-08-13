@@ -1,5 +1,6 @@
 import { useI18n } from '@/i18n/I18nProvider';
-import { PAGE_IDS, PAGE_ICONS } from '@/screens';
+import { APP_NAV_IDS, PAGE_ICONS } from '@/screens';
+import { ProjectMenu } from './ProjectMenu';
 import { NotificationMenu } from './NotificationMenu';
 import { ProfileMenu } from './ProfileMenu';
 import { Icon } from '@/components/Icon';
@@ -13,7 +14,7 @@ import { cn } from '@/lib/cn';
  *
  * ไม่แสดงในหน้าล็อกอิน เพราะผู้ใช้ยังไม่ได้เข้าระบบจึงยังไม่มีเมนูให้ไป
  */
-const NAV_IDS = PAGE_IDS.filter((id) => id !== 'login');
+const NAV_IDS = APP_NAV_IDS;
 
 export function AppBar({ current, onNavigate }) {
   const { t } = useI18n();
@@ -34,6 +35,9 @@ export function AppBar({ current, onNavigate }) {
             </span>
             <span className="ui-heading text-sm max-md:sr-only">{t('login.brand')}</span>
           </button>
+
+          {/* โครงการที่กำลังดูอยู่ + ทางสลับ — วางติดแบรนด์เพราะเป็นบริบทที่ครอบทุกอย่างด้านล่าง */}
+          <ProjectMenu onNavigate={onNavigate} />
 
           {/* เมนูหลัก — เลื่อนแนวนอนได้บนจอเล็กแทนที่จะยุบเป็นแฮมเบอร์เกอร์
               เพราะมีแค่ 4 รายการ การซ่อนไว้ทำให้กดยากกว่าเดิม */}

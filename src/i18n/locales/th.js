@@ -9,6 +9,7 @@ export default {
     confirm: 'ยืนยัน',
     close: 'ปิด',
     search: 'ค้นหา',
+    breadcrumb: 'เส้นทาง',
     loading: 'กำลังโหลด...',
     minutes: 'นาที',
     hours: 'ชั่วโมง',
@@ -33,10 +34,50 @@ export default {
 
   pages: {
     login: 'เข้าสู่ระบบ',
-    subjects: 'เลือกวิชา',
+    projects: 'เลือกโครงการ',
+    // ป้ายกลางๆ ที่ไม่ผูกกับชั้นไหน เพราะแต่ละโครงการเรียกชั้นนี้ไม่เหมือนกัน
+    // ชื่อจริงของชั้น (วิชา/ระดับ) มาจากข้อมูลของโครงการ ไม่ใช่จากไฟล์นี้
+    subjects: 'คอร์ส',
+    browse: 'ไล่ดูเนื้อหา',
     lesson: 'บทเรียน',
     quiz: 'แบบทดสอบ',
     results: 'ผลสอบ',
+  },
+
+  browse: {
+    // {level} มาจากป้ายชั้นของโครงการ ไม่ใช่คำตายตัวในไฟล์นี้
+    allOf: '{level}ทั้งหมด',
+    countOf: 'พบ {n} {level}',
+    inside: '{n} รายการ',
+    emptyOf: 'ยังไม่มี{level}ในส่วนนี้',
+    resume: 'เรียนต่อ',
+    start: 'เริ่มเรียน',
+    done: 'เรียนจบแล้ว',
+  },
+
+  content: {
+    kind: {
+      video: 'วิดีโอ',
+      audio: 'เสียง',
+      doc: 'เอกสาร',
+      activity: 'กิจกรรม',
+      quiz: 'แบบทดสอบ',
+    },
+    pages: '{n} หน้า',
+    estMin: 'ราว {n} นาที',
+    quizMeta: 'ทำได้ไม่จำกัดครั้ง',
+    onlyMock: 'ตัวอย่างหน้าจอ ยังไม่ใช่ตัวเปิดไฟล์จริง',
+  },
+
+  project: {
+    title: 'เลือกโครงการที่ต้องการเรียน',
+    lead: 'แต่ละโครงการมีจำนวนชั้นเนื้อหาและชื่อเรียกไม่เหมือนกัน กดเข้าไปแล้วจะเห็นขั้นตอนต่างกัน',
+    ladder: 'โครงสร้างเนื้อหา {n} ชั้น',
+    courseCount: '{n} {level}',
+    contentCount: '{n} รายการ',
+    open: 'เข้าโครงการ',
+    switch: 'เปลี่ยนโครงการ',
+    current: 'กำลังดูอยู่',
   },
 
   home: {
@@ -94,35 +135,31 @@ export default {
   subjects: {
     greeting: 'สวัสดี, {name}',
     subGreeting: 'วันนี้อยากเรียนอะไรดี',
-    searchPh: 'ค้นหาวิชา บทเรียน หรือผู้สอน',
+    // ไม่เอ่ยชื่อชั้น เพราะแต่ละโครงการเรียกไม่เหมือนกัน
+    searchPh: 'ค้นหาชื่อหรือผู้สอน',
     streak: 'เรียน {n} วันติด',
     level: 'ระดับ {n}',
     notifications: 'การแจ้งเตือน',
     continueTitle: 'เรียนต่อจากที่ค้างไว้',
     continueCta: 'เรียนต่อ',
-    allSubjects: 'วิชาทั้งหมด',
-    resultCount: 'พบ {n} วิชา',
-    sortBy: 'เรียงตาม',
     sortRecent: 'ล่าสุด',
     sortPopular: 'ยอดนิยม',
     sortProgress: 'ความคืบหน้า',
     sortRating: 'คะแนนสูงสุด',
-    lessonsCount: '{n} บทเรียน',
-    enrolled: 'ผู้เรียน {n} คน',
-    empty: 'ไม่พบวิชาที่ค้นหา',
+    empty: 'ไม่พบรายการที่ค้นหา',
     emptyHint: 'ลองเปลี่ยนคำค้นหรือเลือกหมวดอื่นดู',
     clearFilters: 'ล้างตัวกรอง',
     start: 'เริ่มเรียน',
   },
 
   lesson: {
-    playlist: 'รายการบทเรียน',
-    progress: '{done}/{total} บทเรียน',
+    playlist: 'รายการเนื้อหา',
+    progress: '{done}/{total} รายการ',
     overview: 'ภาพรวม',
     docs: 'เอกสาร',
     qa: 'ถาม-ตอบ',
     notes: 'บันทึกย่อ',
-    takeQuiz: 'ทำแบบทดสอบท้ายบท',
+    takeQuiz: 'ทำแบบทดสอบ',
     locked: 'ยังไม่ปลดล็อก',
     watched: 'ดูแล้ว',
     playing: 'กำลังเล่น',

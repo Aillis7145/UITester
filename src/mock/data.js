@@ -282,16 +282,28 @@ export const subjects = [
   },
 ];
 
-/** บทเรียนที่กำลังเรียนค้างอยู่ — ใช้ในแถว "เรียนต่อ" */
+/**
+ * สื่อที่กำลังเรียนค้างอยู่ — ใช้ในแถว "เรียนต่อ"
+ *
+ * เก็บทั้ง courseId และ nodeId เพราะทดสอบ fallback สองชั้นคนละแบบ:
+ *   ไม่มีคอร์ส  → ทิ้งทั้งแถว
+ *   ไม่มีสื่อ    → ยังเรนเดอร์ได้ด้วยรูปปกและคำโปรยของคอร์ส
+ * รายการที่สองจึงชี้ไปที่ node ที่ไม่มีจริงโดยตั้งใจ ห้ามแก้ให้ถูก
+ */
 export const continueLearning = [
-  { subjectId: 's1', lessonId: 'l9', leftSec: 448 },
-  { subjectId: 's2', lessonId: 'l31', leftSec: 126 },
+  { projectId: 'p1', courseId: 's1', nodeId: 'l9', leftSec: 448 },
+  { projectId: 'p1', courseId: 's2', nodeId: 'l31', leftSec: 126 },
 ];
 
+/**
+ * ชื่อไม่มีคำนำหน้าบอกชั้น ("บทที่ 1 ·") อีกแล้ว
+ * เพราะ UI ประกอบ "{ป้ายชั้นของโครงการ} {order} · {title}" ให้เอง
+ * โครงการที่เรียกชั้นนี้ว่า "หน่วย" จึงไม่ได้ข้อความว่า "หน่วย 1 · บทที่ 1 · รู้จักกับ AI"
+ */
 export const sections = [
-  { id: 'sec1', subjectId: 's1', title: { th: 'บทที่ 1 · รู้จักกับ AI', en: 'Ch.1 · Meet AI' } },
-  { id: 'sec2', subjectId: 's1', title: { th: 'บทที่ 2 · Machine Learning เบื้องต้น', en: 'Ch.2 · ML Basics' } },
-  { id: 'sec3', subjectId: 's1', title: { th: 'บทที่ 3 · Neural Networks', en: 'Ch.3 · Neural Networks' } },
+  { id: 'sec1', subjectId: 's1', title: { th: 'รู้จักกับ AI', en: 'Meet AI' } },
+  { id: 'sec2', subjectId: 's1', title: { th: 'Machine Learning เบื้องต้น', en: 'ML Basics' } },
+  { id: 'sec3', subjectId: 's1', title: { th: 'Neural Networks', en: 'Neural Networks' } },
 ];
 
 /** ภาพนิ่งของบทเรียน วนใช้ 6 ภาพ — พอให้เพลย์ลิสต์ดูมีชีวิตโดยไม่ต้องมี 24 ไฟล์ */
@@ -412,8 +424,10 @@ export const lessonDetail = {
 
 export const quiz = {
   id: 'q1',
-  subjectId: 's1',
-  title: { th: 'แบบทดสอบท้ายบทที่ 2', en: 'Chapter 2 Quiz' },
+  // ผูกกับสื่อชนิดแบบทดสอบใน mock/nodes.js ไม่ผูกกับวิชาแล้ว
+  // เพราะ "วิชา" เป็นชื่อชั้นของโครงการหนึ่งเท่านั้น โครงการอื่นเรียกชั้นนี้ว่าระดับ
+  nodeId: 'q-p1',
+  title: { th: 'แบบทดสอบท้ายหน่วย', en: 'End-of-unit quiz' },
   timeLimitSec: 900,
   passMark: 0.6,
   questions: [
@@ -683,11 +697,9 @@ export const notifications = [
    ตัวช่วยเล็กๆ ที่หน้าจอหลายหน้าใช้ร่วมกัน
    --------------------------------------------------------------- */
 
-export const getSubject = (id) => subjects.find((s) => s.id === id);
-export const getLesson = (id) => lessons.find((l) => l.id === id);
-export const getSection = (id) => sections.find((s) => s.id === id);
-
-export const watchedCount = lessons.filter((l) => l.watched).length;
+/* getSubject / getLesson / getSection / watchedCount ถูกลบทิ้งแล้ว
+   การค้นหา node และการนับความคืบหน้าย้ายไปอยู่ใน mock/nodes.js ทั้งหมด
+   เพราะที่นั่นมีดัชนีและ rollup ที่คิดครั้งเดียวตอนโหลด ไม่ใช่ find() ทุกครั้งที่เรนเดอร์ */
 
 /** 742 -> "12:22" | 3600 -> "1:00:00" */
 export function formatDuration(sec) {

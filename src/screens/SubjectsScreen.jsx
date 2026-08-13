@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useScreenState } from './screenState';
-import { categories, subjects, user } from '@/mock/data';
+import { categories, user } from '@/mock/data';
+import { rootsOf, progressOf } from '@/mock/nodes';
+import { useAppRoute } from './appRoute';
+import { targetFor } from './nav';
 import { SubjectCard } from './parts/SubjectCard';
 import { ContinueRow } from './parts/ContinueRow';
 import { Avatar } from '@/components/Avatar';
@@ -16,7 +19,7 @@ import { Skeleton } from '@/components/Skeleton';
 const SORTERS = {
   recent: (a, b) => b.updatedAt.localeCompare(a.updatedAt),
   popular: (a, b) => b.enrolled - a.enrolled,
-  progress: (a, b) => b.progress - a.progress,
+  progress: (a, b) => progressOf(b.id) - progressOf(a.id),
   rating: (a, b) => b.rating - a.rating,
 };
 
@@ -24,9 +27,20 @@ export function SubjectsScreen({ onNavigate }) {
   const { t, p } = useI18n();
   const { showSkeleton } = useScreenState();
 
+  const { project } = useAppRoute();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [sort, setSort] = useState('recent');
+
+  // ป้ายชั้นบนสุดของโครงการนี้ — "วิชา" ของโครงการหนึ่งคือ "ระดับ" ของอีกโครงการ
+  const levelPlural = p(project.levels[0].plural);
+  const courses = rootsOf(project.id);
+
+  // เหลือเฉพาะหมวดที่โครงการนี้มีจริง ไม่งั้นโครงการภาษาจะมีชิปคณิต/วิทย์ที่กดแล้วว่างเปล่า
+  const visibleCategories = useMemo(() => {
+    const used = new Set(courses.map((c) => c.categoryId));
+    return categories.filter((c) => c.id === 'all' || used.has(c.id));
+  }, [courses]);
 
   const sortOptions = [
     { value: 'recent', label: t('subjects.sortRecent'), icon: 'clock' },
@@ -38,7 +52,7 @@ export function SubjectsScreen({ onNavigate }) {
   // กรองจริง ไม่ใช่ตัวประกอบ — ผู้ประเมินต้องกดเล่นได้เพื่อดู empty state
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return subjects
+    return courses
       .filter((s) => category === 'all' || s.categoryId === category)
       .filter((s) => {
         if (!q) return true;
@@ -47,7 +61,7 @@ export function SubjectsScreen({ onNavigate }) {
           .some((text) => text.includes(q));
       })
       .sort(SORTERS[sort]);
-  }, [query, category, sort]);
+  }, [courses, query, category, sort]);
 
   const clearFilters = () => {
     setQuery('');
@@ -92,16 +106,22 @@ export function SubjectsScreen({ onNavigate }) {
 
       {/* ---------- เรียนต่อ ---------- */}
       <div className="mt-8">
-        <ContinueRow onOpen={() => onNavigate?.('lesson')} />
+        {/* ส่ง item ต่อไปจริงๆ แล้ว — เดิมทิ้งไปทั้งก้อนแล้วเปิดบทเรียนตัวเดียวกันเสมอ
+            รายการเรียนต่ออาจอยู่คนละโครงการ จึงต้องพา project ไปด้วย */}
+        <ContinueRow
+          onOpen={(item) =>
+            onNavigate?.('lesson', { project: item.projectId, node: item.nodeId })
+          }
+        />
       </div>
 
       {/* ---------- ตัวกรอง + เรียงลำดับ ---------- */}
       <section className="mt-9">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0">
-            <h2 className="ui-heading text-lg">{t('subjects.allSubjects')}</h2>
+            <h2 className="ui-heading text-lg">{t('browse.allOf', { level: levelPlural })}</h2>
             <p className="mt-0.5 text-sm text-muted">
-              {t('subjects.resultCount', { n: visible.length })}
+              {t('browse.countOf', { n: visible.length, level: levelPlural })}
             </p>
           </div>
 
@@ -117,7 +137,7 @@ export function SubjectsScreen({ onNavigate }) {
         {/* overflow-x-auto ตัดแนวตั้งด้วยเสมอ ชิปที่ยกตัวตอน hover จึงโดนตัดขอบบน
             padding รอบด้าน (ชดเชยด้วย -mx/-mt) เปิดที่ให้ทั้งการยกตัวและเงา โดยไม่ทำให้ layout ขยับ */}
         <div className="-mx-2 mt-1.5 flex gap-2 overflow-x-auto px-2 pb-5 pt-3">
-          {categories.map((cat) => (
+          {visibleCategories.map((cat) => (
             <Chip
               key={cat.id}
               icon={cat.icon}
@@ -136,11 +156,11 @@ export function SubjectsScreen({ onNavigate }) {
           <EmptyState onClear={clearFilters} />
         ) : (
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {visible.map((subject) => (
+            {visible.map((course) => (
               <SubjectCard
-                key={subject.id}
-                subject={subject}
-                onOpen={() => onNavigate?.('lesson')}
+                key={course.id}
+                node={course}
+                onOpen={() => onNavigate?.(...targetFor(course))}
               />
             ))}
           </div>

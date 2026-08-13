@@ -12,7 +12,11 @@ const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
  * ซึ่งเป็นจุดประสงค์ทั้งหมดของหน้านี้ — เทียบว่าแต่ละธีมทำแถบควบคุมออกมาหน้าตาแบบไหน
  * scrubber ลากได้จริงและเวลาเดินจริง เพื่อให้ประเมิน hit target และ feedback ได้
  */
-export function VideoPlayerMock({ lesson, hue = 200, startSec = 0 }) {
+/**
+ * variant='audio' ย่อเวทีให้เตี้ยลงแทนการแยกเป็นคอมโพเนนต์ใหม่
+ * เพราะสิ่งที่ต้องประเมินจริงคือแถบควบคุมที่ทาธีม ซึ่งเสียงกับวิดีโอใช้ของชิ้นเดียวกัน
+ */
+export function VideoPlayerMock({ lesson, hue = 200, startSec = 0, variant = 'video' }) {
   const { t, p } = useI18n();
   const total = lesson?.durationSec ?? 600;
 
@@ -75,7 +79,10 @@ export function VideoPlayerMock({ lesson, hue = 200, startSec = 0 }) {
     <div className="ui-surface overflow-hidden p-0">
       {/* ---------- เวที ---------- */}
       <div
-        className="relative aspect-video w-full overflow-hidden"
+        className={cn(
+          'relative w-full overflow-hidden',
+          variant === 'audio' ? 'aspect-16/5' : 'aspect-video',
+        )}
         style={{
           background: `linear-gradient(150deg, oklch(38% 0.10 ${hue}), oklch(18% 0.06 ${hue + 45}))`,
         }}

@@ -99,7 +99,12 @@ export function ComparePage() {
       <div className="flex flex-1 justify-center gap-5 overflow-auto p-4">
         {THEME_IDS.map((themeId) => {
           const theme = THEMES[themeId];
-          const src = `/embed/${themeId}/${pageId}?lang=${lang}&live3d=0`;
+          // ส่ง query ทั้งก้อนต่อไปแทนการประกอบเอง — ?project กับ ?node จึงไหลเข้า iframe ด้วย
+          // ทำให้ /compare/browse?node=x เทียบ node เดียวกันครบทุกธีมได้จริง
+          const q = new URLSearchParams(sp);
+          q.set('lang', lang);
+          q.set('live3d', '0');
+          const src = `/embed/${themeId}/${pageId}?${q}`;
 
           return (
             <section key={themeId} className="flex flex-col gap-2.5">
@@ -110,7 +115,11 @@ export function ComparePage() {
                   icon="external"
                   label={t('compare.openFull')}
                   size="sm"
-                  onClick={() => navigate(`/showcase/${themeId}/${pageId}`)}
+                  onClick={() => {
+                    // พา query ไปด้วย ไม่งั้นกดออกไปดูเต็มจอแล้วหลุดทั้งภาษาและตำแหน่งที่กำลังดู
+                    const qs = sp.toString();
+                    navigate(`/showcase/${themeId}/${pageId}${qs ? `?${qs}` : ''}`);
+                  }}
                 />
               </header>
 

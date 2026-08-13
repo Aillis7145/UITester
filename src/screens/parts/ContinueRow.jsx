@@ -1,5 +1,6 @@
 import { useI18n } from '@/i18n/I18nProvider';
-import { continueLearning, getSubject, getLesson, formatDuration } from '@/mock/data';
+import { continueLearning, formatDuration } from '@/mock/data';
+import { getNode, progressOf } from '@/mock/nodes';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { ProgressBar } from '@/components/ProgressBar';
@@ -14,16 +15,18 @@ export function ContinueRow({ onOpen }) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {continueLearning.map((item) => {
-          const subject = getSubject(item.subjectId);
-          const lesson = getLesson(item.lessonId);
-          if (!subject) return null;
+          const course = getNode(item.courseId);
+          // สื่อหายได้ (ตั้งใจให้มีรายการหนึ่งชี้ไปที่ของที่ไม่มีจริง) แต่คอร์สหายแปลว่าแถวนี้ไร้ความหมาย
+          const node = getNode(item.nodeId);
+          if (!course) return null;
+          const progress = progressOf(course.id);
 
           return (
-            <article key={item.subjectId} className="ui-surface flex items-center gap-4 p-4">
+            <article key={item.courseId} className="ui-surface flex items-center gap-4 p-4">
               {/* ภาพนิ่งของบทเรียนที่ค้างไว้ พร้อมปุ่มเล่นทับ ให้รู้ทันทีว่ากดแล้วเล่นต่อ */}
               <div className="relative h-20 w-32 shrink-0 overflow-hidden rounded-ui bg-surface-2">
                 <img
-                  src={lesson?.thumb ?? subject.cover}
+                  src={node?.thumb ?? course.cover}
                   alt=""
                   loading="lazy"
                   decoding="async"
@@ -40,14 +43,14 @@ export function ContinueRow({ onOpen }) {
               </div>
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-muted">{p(subject.title)}</p>
+                <p className="truncate text-sm text-muted">{p(course.title)}</p>
                 <h3 className="ui-heading mt-0.5 line-clamp-1 text-base">
-                  {lesson ? p(lesson.title) : p(subject.subtitle)}
+                  {node ? p(node.title) : p(course.subtitle)}
                 </h3>
                 <div className="mt-2.5 flex items-center gap-2.5">
-                  <ProgressBar value={subject.progress} size="sm" className="flex-1" />
+                  <ProgressBar value={progress} size="sm" className="flex-1" />
                   <span className="shrink-0 text-sm font-semibold text-primary-ink">
-                    {Math.round(subject.progress * 100)}%
+                    {Math.round(progress * 100)}%
                   </span>
                 </div>
               </div>
