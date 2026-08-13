@@ -228,6 +228,19 @@ export default {
     variantCount: '{n} แบบ',
   },
 
+  appbar: {
+    accountMenu: 'เมนูบัญชีผู้ใช้',
+    unread: 'ยังไม่ได้อ่าน {n} รายการ',
+    markAllRead: 'อ่านทั้งหมด',
+    viewAll: 'ดูการแจ้งเตือนทั้งหมด',
+    noNotifications: 'ยังไม่มีการแจ้งเตือน',
+    profile: 'โปรไฟล์ของฉัน',
+    myCourses: 'คอร์สของฉัน',
+    certificates: 'ใบประกาศนียบัตร',
+    saved: 'รายการที่บันทึกไว้',
+    settings: 'ตั้งค่า',
+  },
+
   spec: {
     title: 'สเปกของธีม',
     font: 'ฟอนต์',

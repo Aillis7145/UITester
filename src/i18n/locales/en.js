@@ -229,6 +229,19 @@ export default {
     variantCount: '{n} variants',
   },
 
+  appbar: {
+    accountMenu: 'Account menu',
+    unread: '{n} unread',
+    markAllRead: 'Mark all read',
+    viewAll: 'View all notifications',
+    noNotifications: 'No notifications yet',
+    profile: 'My profile',
+    myCourses: 'My courses',
+    certificates: 'Certificates',
+    saved: 'Saved items',
+    settings: 'Settings',
+  },
+
   spec: {
     title: 'Theme spec',
     font: 'Font',

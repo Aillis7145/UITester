@@ -1,7 +1,7 @@
 import { useI18n } from '@/i18n/I18nProvider';
-import { user } from '@/mock/data';
 import { PAGE_IDS, PAGE_ICONS } from '@/screens';
-import { Avatar } from '@/components/Avatar';
+import { NotificationMenu } from './NotificationMenu';
+import { ProfileMenu } from './ProfileMenu';
 import { Icon } from '@/components/Icon';
 import { IconButton } from '@/components/IconButton';
 import { cn } from '@/lib/cn';
@@ -16,7 +16,7 @@ import { cn } from '@/lib/cn';
 const NAV_IDS = PAGE_IDS.filter((id) => id !== 'login');
 
 export function AppBar({ current, onNavigate }) {
-  const { t, p } = useI18n();
+  const { t } = useI18n();
 
   return (
     <header className="sticky top-0 z-30">
@@ -65,11 +65,11 @@ export function AppBar({ current, onNavigate }) {
             </ul>
           </nav>
 
-          {/* เครื่องมือฝั่งขวา */}
+          {/* เครื่องมือฝั่งขวา — กระดิ่งกับโปรไฟล์กดเปิดเมนูได้จริง */}
           <div className="flex shrink-0 items-center gap-1.5">
             <IconButton icon="search" label={t('common.search')} size="sm" className="max-sm:hidden" />
-            <IconButton icon="bell" label={t('subjects.notifications')} size="sm" badge={2} />
-            <Avatar name={p(user.name)} size="sm" className="ml-1" />
+            <NotificationMenu />
+            <ProfileMenu onNavigate={onNavigate} />
           </div>
         </div>
       </div>

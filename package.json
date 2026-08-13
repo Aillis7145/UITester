@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "oxlint src",
     "preview": "vite preview",
+    "serve": "vite build && vite preview",
     "audit:tokens": "node scripts/audit-tokens.mjs",
     "audit:contrast": "node scripts/audit-contrast.mjs",
     "verify": "node scripts/verify-ui.mjs"
