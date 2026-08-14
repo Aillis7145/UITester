@@ -24,7 +24,6 @@ export const projects = [
   {
     id: 'p1',
     icon: 'brain',
-    hue: 195,
     cover: '/mock/ai.jpg',
     name: { th: 'ศูนย์การเรียนรู้ AI', en: 'AI Learning Center' },
     tagline: {
@@ -41,7 +40,6 @@ export const projects = [
   {
     id: 'p2',
     icon: 'book',
-    hue: 355,
     cover: '/mock/thai.jpg',
     name: { th: 'ติวสอบวัดระดับภาษาจีน', en: 'Chinese Proficiency Prep' },
     tagline: {
@@ -58,7 +56,6 @@ export const projects = [
   {
     id: 'p3',
     icon: 'globe',
-    hue: 25,
     cover: '/mock/english.jpg',
     name: { th: 'ภาษาอังกฤษเพื่อการสื่อสาร', en: 'English for Communication' },
     tagline: {
@@ -77,7 +74,6 @@ export const projects = [
   {
     id: 'p4',
     icon: 'users',
-    hue: 145,
     cover: '/mock/math.jpg',
     name: { th: 'ห้องเรียนออนไลน์มัธยม', en: 'Secondary Online Classroom' },
     tagline: {

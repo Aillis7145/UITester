@@ -14,7 +14,7 @@
 // เขียนนามสกุลไว้ด้วยโดยตั้งใจ — Vite ไม่ต้องการก็จริง แต่ Node ล้วนต้องการ
 // ทำให้สคริปต์ตรวจสอบ import ไฟล์นี้ตรงๆ ได้โดยไม่ต้องผ่าน bundler
 import { subjects, sections, lessons, quiz, currentLessonId, lessonDetail } from './data.js';
-import { projects, DEFAULT_PROJECT_ID } from './projects.js';
+import { projects, DEFAULT_PROJECT_ID, LEVEL_ORDER } from './projects.js';
 
 const nodes = [];
 const push = (n) => (nodes.push(n), n);
@@ -439,7 +439,6 @@ nodes
     };
   });
 
-export { nodes };
 
 /* ============================================================
    ดัชนี — สร้างครั้งเดียวตอนโหลด
@@ -481,45 +480,59 @@ nodes.forEach(rollup);
    ============================================================ */
 
 export const getProject = (id) => projects.find((p) => p.id === id);
-export const isProjectId = (id) => projects.some((p) => p.id === id);
 export const getNode = (id) => BY_ID.get(id);
 export const rootsOf = (projectId) => KIDS.get(`root:${projectId}`) ?? [];
 export const childrenOf = (nodeId) => KIDS.get(nodeId) ?? [];
 export const siblingsOf = (nodeId) => childrenOf(getNode(nodeId)?.parentId);
 
-/** ราก → พ่อ (ไม่รวมตัวเอง) — ใช้ทำ breadcrumb */
+/**
+ * ราก → พ่อ (ไม่รวมตัวเอง) — ใช้ทำ breadcrumb
+ *
+ * seen กันไว้เผื่อข้อมูลมีวงจรใน parentId ซึ่งไม่มีอะไรตรวจให้เลย
+ * ถ้าไม่กัน ลูปนี้จะวนไม่รู้จบและแท็บค้างทั้งแท็บ ซึ่งดีบั๊กยากกว่า error หลายเท่า
+ */
 export function ancestorsOf(nodeId) {
   const out = [];
+  const seen = new Set([nodeId]);
   let cur = getNode(nodeId);
-  while (cur?.parentId) {
+  while (cur?.parentId && !seen.has(cur.parentId)) {
+    seen.add(cur.parentId);
     cur = getNode(cur.parentId);
     if (cur) out.unshift(cur);
   }
   return out;
 }
 
-/** ชั้นถัดไปตามที่โครงการประกาศไว้ — 'content' เมื่อหมดชั้นกล่องแล้ว */
+/**
+ * ชั้นถัดไปตามที่โครงการประกาศไว้ — 'content' เมื่อหมดชั้นกล่องแล้ว
+ *
+ * การ์ด i < 0 สำคัญกว่าที่เห็น: findIndex คืน -1 เมื่อชั้นนั้นไม่ได้ถูกประกาศไว้
+ * แล้ว levels[-1 + 1] คือ levels[0] ซึ่งคือ 'course' — ไม่ใช่ "ไม่เจอ"
+ * แต่เป็น "เจอ แล้วตอบว่าลูกของมันคือคอร์ส" ซึ่งเป็นคำตอบที่แย่ที่สุดที่จะตอบได้
+ * เพราะ BrowseScreen จะเรนเดอร์ SubjectCard ทับกล่องชั้นกลาง
+ * แล้ว node.rating.toFixed() พังเป็นจอขาวห่างจากต้นเหตุไปสามไฟล์
+ */
 export function nextLevel(project, level) {
   const i = project.levels.findIndex((l) => l.level === level);
+  if (i < 0) return undefined;
   return project.levels[i + 1]?.level ?? 'content';
 }
-export const rootLevel = (project) => project.levels[0].level;
 export const levelDef = (project, level) => project.levels.find((l) => l.level === level);
 
 export const contentCountOf = (nodeId) => ROLLUP.get(nodeId)?.total ?? 0;
-export const watchedCountOf = (nodeId) => ROLLUP.get(nodeId)?.watched ?? 0;
 export const progressOf = (nodeId) => {
   const r = ROLLUP.get(nodeId);
   return r?.total ? r.watched / r.total : 0;
 };
 
-/** ใบไม้ซ้ายสุดใต้กล่องนี้ */
-export function firstContentOf(nodeId) {
+/** ใบไม้ซ้ายสุดใต้กล่องนี้ · seen กันวงจรเหมือน ancestorsOf */
+export function firstContentOf(nodeId, seen = new Set()) {
   const n = getNode(nodeId);
-  if (!n) return undefined;
+  if (!n || seen.has(n.id)) return undefined;
+  seen.add(n.id);
   if (n.level === 'content') return n;
   for (const kid of childrenOf(n.id)) {
-    const found = firstContentOf(kid.id);
+    const found = firstContentOf(kid.id, seen);
     if (found) return found;
   }
   return undefined;
@@ -527,9 +540,11 @@ export function firstContentOf(nodeId) {
 
 /** ใบไม้แรกที่ยังไม่ได้ดูและไม่ล็อก มิฉะนั้นคืนตัวแรก — ใช้กับปุ่ม "เรียนต่อ" */
 export function resumeContentOf(nodeId) {
+  const seen = new Set();
   const walk = (id) => {
     const n = getNode(id);
-    if (!n) return undefined;
+    if (!n || seen.has(n.id)) return undefined;
+    seen.add(n.id);
     if (n.level === 'content') return !n.watched && !n.locked ? n : undefined;
     for (const kid of childrenOf(n.id)) {
       const found = walk(kid.id);
@@ -561,6 +576,18 @@ if (import.meta.env?.DEV) {
       problems.push(`${n.id}: โครงการ ${n.projectId} ไม่ได้ประกาศชั้น ${n.level}`);
   }
   for (const project of projects) {
+    // levels[] ต้องเป็นลำดับย่อยของ LEVEL_ORDER — เลือกข้ามชั้นได้ แต่ห้ามสลับลำดับ
+    // ก่อนหน้านี้กฎข้อนี้เป็นแค่คอมเมนต์ ไม่มีอะไรบังคับ (LEVEL_ORDER ไม่มีใคร import เลย)
+    let prev = -1;
+    for (const l of project.levels) {
+      const at = LEVEL_ORDER.indexOf(l.level);
+      if (at < 0) problems.push(`${project.id}: ไม่รู้จักชั้น ${l.level}`);
+      else if (at <= prev) problems.push(`${project.id}: ชั้น ${l.level} สลับลำดับผิดจาก LEVEL_ORDER`);
+      else prev = at;
+    }
+    if (project.levels[0]?.level !== LEVEL_ORDER[0])
+      problems.push(`${project.id}: ชั้นแรกต้องเป็น ${LEVEL_ORDER[0]}`);
+
     const roots = rootsOf(project.id);
     if (!roots.length) problems.push(`${project.id}: ไม่มีคอร์สเลย`);
     for (const root of roots) {

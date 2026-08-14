@@ -5,20 +5,12 @@ export default {
     next: 'Next',
     prev: 'Previous',
     submit: 'Submit',
-    cancel: 'Cancel',
     confirm: 'Confirm',
-    close: 'Close',
     search: 'Search',
     breadcrumb: 'Breadcrumb',
-    loading: 'Loading...',
-    minutes: 'minutes',
-    hours: 'hours',
     hourShort: 'h',
     minuteShort: 'm',
-    all: 'All',
-    copy: 'Copy',
     copied: 'Copied',
-    of: 'of',
   },
 
   nav: {
@@ -26,7 +18,6 @@ export default {
     showcase: 'Screens',
     compare: 'Compare',
     lab: 'Component Lab',
-    themes: 'Themes',
     pages: 'Screens',
     language: 'Language',
     device: 'Screen size',
@@ -74,7 +65,6 @@ export default {
     contentCount: '{n} items',
     open: 'Open project',
     switch: 'Switch project',
-    current: 'Currently viewing',
   },
 
   home: {
@@ -103,8 +93,6 @@ export default {
     fullscreen: 'Expand',
     fullscreenHint: 'View this screen full window',
     exitFullscreen: 'Collapse',
-    syncScroll: 'Sync scroll',
-    live3d: 'Live 3D',
     notFound: 'Page not found',
     backHome: 'Back to home',
   },
@@ -178,7 +166,6 @@ export default {
     saveNote: 'Save',
     askQuestion: 'Ask a question',
     replies: '{n} replies',
-    noNotes: 'No notes yet — try jotting down what you just learned',
   },
 
   quiz: {
@@ -188,8 +175,6 @@ export default {
     flagged: 'Flagged',
     skip: 'Skip',
     multiHint: 'Select more than one',
-    trueLabel: 'True',
-    falseLabel: 'False',
     navigator: 'Question map',
     stateAnswered: 'Answered',
     stateUnanswered: 'Unanswered',
@@ -199,14 +184,12 @@ export default {
     confirmBody: "You've answered {answered} of {total}. You can't change them after submitting.",
     confirmSubmit: 'Submit',
     keepGoing: 'Keep going',
-    timeUp: "Time's up",
   },
 
   result: {
     title: 'Quiz results',
     passed: 'Passed',
     failed: 'Not passed',
-    yourScore: 'Your score',
     correct: 'Correct',
     wrong: 'Incorrect',
     timeUsed: 'Time used',
@@ -276,7 +259,6 @@ export default {
   },
 
   spec: {
-    title: 'Theme spec',
     font: 'Font',
     radius: 'Radius',
     frame: 'Frame',

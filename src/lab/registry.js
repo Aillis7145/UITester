@@ -41,7 +41,6 @@ export const GROUPS = [
   'cards',
   'frames',
 ];
-export const DEFAULT_GROUP = 'buttons';
 
 export const isGroup = (g) => GROUPS.includes(g);
 export const byGroup = (g) => VARIANTS.filter((v) => v.group === g);

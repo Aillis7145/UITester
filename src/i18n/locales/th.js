@@ -5,20 +5,12 @@ export default {
     next: 'ถัดไป',
     prev: 'ก่อนหน้า',
     submit: 'ส่งคำตอบ',
-    cancel: 'ยกเลิก',
     confirm: 'ยืนยัน',
-    close: 'ปิด',
     search: 'ค้นหา',
     breadcrumb: 'เส้นทาง',
-    loading: 'กำลังโหลด...',
-    minutes: 'นาที',
-    hours: 'ชั่วโมง',
     hourShort: 'ชม.',
     minuteShort: 'น.',
-    all: 'ทั้งหมด',
-    copy: 'คัดลอก',
     copied: 'คัดลอกแล้ว',
-    of: 'จาก',
   },
 
   nav: {
@@ -26,7 +18,6 @@ export default {
     showcase: 'ตัวอย่างหน้าจอ',
     compare: 'เปรียบเทียบ',
     lab: 'คลังคอมโพเนนต์',
-    themes: 'ธีม',
     pages: 'หน้าจอ',
     language: 'ภาษา',
     device: 'ขนาดจอ',
@@ -77,7 +68,6 @@ export default {
     contentCount: '{n} รายการ',
     open: 'เข้าโครงการ',
     switch: 'เปลี่ยนโครงการ',
-    current: 'กำลังดูอยู่',
   },
 
   home: {
@@ -105,8 +95,6 @@ export default {
     fullscreen: 'ขยายตัวอย่าง',
     fullscreenHint: 'ดูตัวอย่างหน้าจอแบบเต็มหน้าต่าง',
     exitFullscreen: 'ย่อกลับ',
-    syncScroll: 'เลื่อนพร้อมกัน',
-    live3d: 'เปิด 3 มิติ',
     notFound: 'ไม่พบหน้าที่ต้องการ',
     backHome: 'กลับหน้าแรก',
   },
@@ -181,7 +169,6 @@ export default {
     saveNote: 'บันทึก',
     askQuestion: 'ตั้งคำถาม',
     replies: '{n} ตอบกลับ',
-    noNotes: 'ยังไม่มีบันทึกย่อ ลองจดสิ่งที่เพิ่งเรียนดู',
   },
 
   quiz: {
@@ -191,8 +178,6 @@ export default {
     flagged: 'ทำเครื่องหมายแล้ว',
     skip: 'ข้ามข้อนี้',
     multiHint: 'เลือกได้มากกว่า 1 ข้อ',
-    trueLabel: 'ถูก',
-    falseLabel: 'ผิด',
     navigator: 'ผังข้อสอบ',
     stateAnswered: 'ตอบแล้ว',
     stateUnanswered: 'ยังไม่ตอบ',
@@ -202,14 +187,12 @@ export default {
     confirmBody: 'คุณตอบแล้ว {answered} จาก {total} ข้อ ส่งแล้วจะแก้ไขไม่ได้',
     confirmSubmit: 'ส่งคำตอบ',
     keepGoing: 'ทำต่อ',
-    timeUp: 'หมดเวลา',
   },
 
   result: {
     title: 'ผลการทดสอบ',
     passed: 'ผ่าน',
     failed: 'ไม่ผ่าน',
-    yourScore: 'คะแนนของคุณ',
     correct: 'ตอบถูก',
     wrong: 'ตอบผิด',
     timeUsed: 'เวลาที่ใช้',
@@ -279,7 +262,6 @@ export default {
   },
 
   spec: {
-    title: 'สเปกของธีม',
     font: 'ฟอนต์',
     radius: 'ความมน',
     frame: 'กรอบ',

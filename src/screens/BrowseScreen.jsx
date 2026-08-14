@@ -38,12 +38,15 @@ export function BrowseScreen({ onNavigate }) {
 
   if (showSkeleton) return <BrowseSkeleton />;
 
+  // undefined = โครงการไม่ได้ประกาศชั้นของ node นี้ไว้ (เกิดได้ถ้าถอดชั้นออกจาก levels[]
+  // ทั้งที่ยังมี node ชั้นนั้นค้างอยู่) แสดงสถานะว่างแทนการพังทั้งหน้า
   const childLevel = nextLevel(project, node.level);
-  const children = childrenOf(node.id);
   const isLeafList = childLevel === 'content';
   const childDef = isLeafList ? null : levelDef(project, childLevel);
-  const childLabel = isLeafList ? p(project.contentLabel) : p(childDef.label);
-  const childPlural = isLeafList ? p(project.contentLabel) : p(childDef.plural);
+  const orphaned = !isLeafList && !childDef;
+  const children = orphaned ? [] : childrenOf(node.id);
+  const childLabel = isLeafList ? p(project.contentLabel) : (p(childDef?.label) ?? '');
+  const childPlural = isLeafList ? p(project.contentLabel) : (p(childDef?.plural) ?? '');
 
   const ownDef = levelDef(project, node.level);
   const progress = progressOf(node.id);

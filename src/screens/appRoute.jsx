@@ -20,7 +20,7 @@ const Ctx = createContext(null);
  * เพราะสตูดิโอลิงก์ตรงเข้า /showcase/neu/browse ได้ และสคริปต์ตรวจสอบถ่ายภาพ
  * ทุกหน้า × ทุกธีมโดยไม่ใส่ query เลยสักตัว ถ้า redirect ภาพจะเพี้ยนทั้งชุด
  */
-export function resolveRoute({ pageId, projectId, nodeId }) {
+function resolveRoute({ pageId, projectId, nodeId }) {
   const project = getProject(projectId) ?? getProject(DEFAULT_PROJECT_ID);
   const raw = nodeId ? getNode(nodeId) : undefined;
   // node ข้ามโครงการถือว่าใช้ไม่ได้ — เกิดขึ้นจริงเวลาสลับโครงการแล้ว ?node เก่ายังค้างอยู่
