@@ -74,6 +74,28 @@ export const projects = [
     ],
     contentLabel: { th: 'สื่อการเรียน', en: 'Content' },
   },
+  {
+    id: 'p4',
+    icon: 'users',
+    hue: 145,
+    cover: '/mock/math.jpg',
+    name: { th: 'ห้องเรียนออนไลน์มัธยม', en: 'Secondary Online Classroom' },
+    tagline: {
+      th: 'เลือกชั้นปีแล้วดูวิดีโอได้เลย ไม่ต้องไล่หลายชั้น',
+      en: 'Pick your year and start watching — no digging',
+    },
+    /**
+     * ชั้นเดียวล้วน — กรณีตื้นที่สุดที่ระบบต้องรับได้
+     * levels.length - 1 = 0 แปลว่าไม่ผ่านหน้าไล่ระดับเลยสักหน้า
+     * กดชั้นปีปุ๊บถึงวิดีโอปั๊บ ซึ่งเป็นโครงสร้างที่แพลตฟอร์มติวจำนวนมากใช้จริง
+     *
+     * ถ้าโค้ดตรงไหนแอบสมมติว่า "ต้องมีชั้นกลางอย่างน้อยหนึ่งชั้น" จะพังที่โครงการนี้ก่อนเพื่อน
+     */
+    levels: [
+      { level: 'course', label: { th: 'ชั้นปี', en: 'Year' }, plural: { th: 'ชั้นปี', en: 'Years' } },
+    ],
+    contentLabel: { th: 'วิดีโอบทเรียน', en: 'Lesson videos' },
+  },
 ];
 
 export const DEFAULT_PROJECT_ID = 'p1';

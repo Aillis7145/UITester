@@ -30,7 +30,11 @@ export function LessonScreen({ onNavigate }) {
 
   // เพลย์ลิสต์ = พี่น้องของสื่อชิ้นนี้ จัดกลุ่มตามพี่น้องของกล่องแม่
   // โครงการที่ตื้นกว่าจึงยุบเหลือกลุ่มน้อยลงเองโดยไม่ต้องมีเงื่อนไขไหนรู้ความลึก
-  const groups = siblingsOf(parent.id).map((g) => ({ node: g, items: childrenOf(g.id) }));
+  //
+  // แต่ถ้ากล่องแม่เป็นคอร์ส (โครงการชั้นเดียว) พี่น้องของมันคือ "ทุกคอร์สในโครงการ"
+  // ซึ่งจะลากวิดีโอของชั้นปีอื่นมาไว้ในเพลย์ลิสต์ด้วยทั้งหมด — กรณีนั้นเหลือกลุ่มเดียวพอ
+  const scope = parent.parentId ? siblingsOf(parent.id) : [parent];
+  const groups = scope.map((g) => ({ node: g, items: childrenOf(g.id) }));
 
   if (showSkeleton) return <LessonSkeleton />;
 
@@ -81,7 +85,7 @@ export function LessonScreen({ onNavigate }) {
             </div>
           </div>
 
-          <LessonTabs />
+          <LessonTabs detail={content.detail ?? course.detail} />
         </div>
 
         {/* ---------- คอลัมน์ขวา ---------- */}

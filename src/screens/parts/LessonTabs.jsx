@@ -9,7 +9,7 @@ import { Tabs } from '@/components/Tabs';
 
 const RESOURCE_ICON = { pdf: 'file', code: 'code', data: 'layers' };
 
-export function LessonTabs() {
+export function LessonTabs({ detail = lessonDetail }) {
   const { t } = useI18n();
   const [tab, setTab] = useState('overview');
   const panelId = useId();
@@ -26,24 +26,24 @@ export function LessonTabs() {
       <Tabs items={items} value={tab} onChange={setTab} panelId={panelId} className="px-2 pt-1" />
 
       <div id={panelId} role="tabpanel" className="p-5 sm:p-6">
-        {tab === 'overview' && <Overview />}
-        {tab === 'docs' && <Resources />}
-        {tab === 'qa' && <QA />}
-        {tab === 'notes' && <Notes />}
+        {tab === 'overview' && <Overview detail={detail} />}
+        {tab === 'docs' && <Resources detail={detail} />}
+        {tab === 'qa' && <QA detail={detail} />}
+        {tab === 'notes' && <Notes detail={detail} />}
       </div>
     </section>
   );
 }
 
-function Overview() {
+function Overview({ detail }) {
   const { t, p } = useI18n();
   return (
     <div>
-      <p className="leading-relaxed text-muted">{p(lessonDetail.description)}</p>
+      <p className="leading-relaxed text-muted">{p(detail.description)}</p>
 
       <h3 className="ui-heading mt-6 text-base">{t('lesson.objectives')}</h3>
       <ul className="mt-3 grid gap-2.5">
-        {lessonDetail.objectives.map((obj) => (
+        {detail.objectives.map((obj) => (
           <li key={p(obj)} className="flex items-start gap-2.5">
             <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-success/20 text-success">
               <Icon name="check" size={13} strokeWidth={3} />
@@ -56,11 +56,11 @@ function Overview() {
   );
 }
 
-function Resources() {
+function Resources({ detail }) {
   const { p } = useI18n();
   return (
     <ul className="grid gap-2.5">
-      {lessonDetail.resources.map((res) => (
+      {detail.resources.map((res) => (
         <li key={res.id}>
           <button
             type="button"
@@ -83,7 +83,7 @@ function Resources() {
   );
 }
 
-function QA() {
+function QA({ detail }) {
   const { t, p } = useI18n();
   return (
     <div>
@@ -92,7 +92,7 @@ function QA() {
       </Button>
 
       <ul className="mt-5 grid gap-4">
-        {lessonDetail.qa.map((item) => (
+        {detail.qa.map((item) => (
           <li key={item.id} className="flex gap-3">
             <Avatar name={p(item.author)} size="sm" />
             <div className="min-w-0 flex-1">
@@ -119,7 +119,7 @@ function QA() {
   );
 }
 
-function Notes() {
+function Notes({ detail }) {
   const { t, p } = useI18n();
   const [draft, setDraft] = useState('');
 
@@ -142,7 +142,7 @@ function Notes() {
       </div>
 
       <ul className="mt-5 grid gap-3">
-        {lessonDetail.notes.map((note) => (
+        {detail.notes.map((note) => (
           <li key={note.id} className="ui-panel flex gap-3 p-3.5">
             <Badge tone="primary" size="sm" className="h-fit shrink-0 font-mono">
               {formatDuration(note.atSec)}

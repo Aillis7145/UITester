@@ -13,7 +13,7 @@
  */
 // เขียนนามสกุลไว้ด้วยโดยตั้งใจ — Vite ไม่ต้องการก็จริง แต่ Node ล้วนต้องการ
 // ทำให้สคริปต์ตรวจสอบ import ไฟล์นี้ตรงๆ ได้โดยไม่ต้องผ่าน bundler
-import { subjects, sections, lessons, quiz, currentLessonId } from './data.js';
+import { subjects, sections, lessons, quiz, currentLessonId, lessonDetail } from './data.js';
 import { projects, DEFAULT_PROJECT_ID } from './projects.js';
 
 const nodes = [];
@@ -332,9 +332,112 @@ function buildP3() {
   );
 }
 
+/* ============================================================
+   โครงการที่ 4 — ชั้นเดียวล้วน คอร์สมีสื่อเป็นลูกโดยตรง
+   ============================================================ */
+
+const P4_YEARS = [
+  ['ม.1', 'Grade 7'],
+  ['ม.2', 'Grade 8'],
+  ['ม.3', 'Grade 9'],
+  ['ม.4', 'Grade 10'],
+  ['ม.5', 'Grade 11'],
+  ['ม.6', 'Grade 12'],
+];
+
+/** ทุกชั้นปีเรียนวิชาเดียวกัน ชื่อวิดีโอจึงซ้ำข้ามชั้นปีได้ตามหลักสูตรจริง */
+const P4_TOPICS = [
+  ['คณิตศาสตร์: จำนวนและพีชคณิต', 'Maths: numbers and algebra'],
+  ['วิทยาศาสตร์: สารและการเปลี่ยนแปลง', 'Science: matter and change'],
+  ['ภาษาไทย: หลักภาษาและการใช้', 'Thai: grammar and usage'],
+  ['ภาษาอังกฤษ: ไวยากรณ์และการอ่าน', 'English: grammar and reading'],
+  ['สังคมศึกษา: ประวัติศาสตร์และภูมิศาสตร์', 'Social studies: history and geography'],
+  ['สรุปเนื้อหาก่อนสอบปลายภาค', 'Final exam revision'],
+];
+
+function buildP4() {
+  const teacher = { th: 'ครูพิมพ์ชนก อินทรสาร', en: 'Pimchanok Intharasan' };
+  P4_YEARS.forEach(([yth, yen], i) => {
+    const id = `p4-c${i + 1}`;
+    push({
+      id,
+      projectId: 'p4',
+      parentId: null,
+      level: 'course',
+      order: i + 1,
+      cover: COVERS[(i * 3 + 4) % COVERS.length],
+      categoryId: 'all',
+      icon: 'users',
+      hue: 145,
+      title: { th: `มัธยมศึกษาปีที่ ${i + 1}`, en: `${yen}` },
+      subtitle: { th: `รวมวิดีโอบทเรียนของ ${yth} ทุกวิชา`, en: `Every lesson video for ${yen.toLowerCase()}` },
+      instructor: teacher,
+      difficulty: { th: i < 3 ? 'ต้น' : 'ปลาย', en: i < 3 ? 'Lower' : 'Upper' },
+      durationMin: 150 + i * 20,
+      rating: 4.4 + ((i * 2) % 6) / 10,
+      enrolled: 380 + i * 96,
+      updatedAt: `2026-0${(i % 8) + 1}-2${i % 9}`,
+      tags: [
+        { th: yth, en: yen },
+        { th: 'วิดีโอ', en: 'Video' },
+      ],
+    });
+
+    // สื่อแขวนใต้คอร์สโดยตรง ไม่มีกล่องคั่น — นี่คือทั้งหมดที่ "ชั้นเดียว" หมายถึง
+    P4_TOPICS.forEach(([tth, ten], k) => {
+      const seed = i * 6 + k;
+      const node = content(
+        'p4',
+        id,
+        k + 1,
+        { th: `${tth} (${yth})`, en: `${ten} (${yen})` },
+        'video',
+        seed,
+        i === 0 && k < 2 ? 'watched' : i === 5 && k >= 4 ? 'locked' : 'idle',
+      );
+      node.durationSec = 540 + ((seed * 97) % 700);
+    });
+  });
+}
+
 buildP1();
 buildP2();
 buildP3();
+buildP4();
+
+/* ============================================================
+   รายละเอียดบทเรียนต่อคอร์ส
+   ------------------------------------------------------------
+   lessonDetail ใน data.js เป็น object เดี่ยวที่ไม่มี foreign key
+   ถ้าปล่อยให้ทุกสื่อใช้ตัวเดียวกัน วิดีโอคณิต ม.6 จะขึ้นว่า
+   "ฝึกโมเดล Machine Learning ตัวแรกด้วย scikit-learn" ซึ่งอ่านแล้วรู้ทันทีว่าพัง
+
+   จึงสร้างคำอธิบายกับวัตถุประสงค์จากชื่อคอร์สเอง ส่วนเอกสาร/ถาม-ตอบ/บันทึกย่อ
+   ยังใช้ของกลางร่วมกัน เพราะเป็นโครงหน้าตาที่ต้องมีให้ประเมิน ไม่ใช่เนื้อหาที่ต้องตรงวิชา
+   ============================================================ */
+nodes
+  .filter((n) => n.level === 'course')
+  .forEach((course) => {
+    // คอร์ส AI ตัวแรกมีเนื้อหาเขียนมือไว้จริงอยู่แล้ว ไม่ต้องสร้างทับ
+    if (course.id === 's1') {
+      course.detail = lessonDetail;
+      return;
+    }
+    const { th, en } = course.title;
+    course.detail = {
+      ...lessonDetail,
+      description: {
+        th: `บทเรียนชุดนี้อยู่ในคอร์ส "${th}" ${course.subtitle?.th ?? ''} เนื้อหาเรียงจากพื้นฐานไปหาการนำไปใช้ ดูจบแล้วทำแบบทดสอบท้ายบทได้ทันที`,
+        en: `Part of "${en}". ${course.subtitle?.en ?? ''} It runs from the basics through to applying them, and ends with a quiz.`,
+      },
+      objectives: [
+        { th: `เข้าใจแนวคิดหลักของ${th}`, en: `Grasp the core ideas behind ${en.toLowerCase()}` },
+        { th: 'ทำตามตัวอย่างในคลิปได้ด้วยตัวเอง', en: 'Follow along with the worked examples' },
+        { th: 'แยกแยะข้อผิดพลาดที่พบบ่อยได้', en: 'Spot the mistakes people usually make' },
+        { th: 'นำไปใช้กับโจทย์ที่ยังไม่เคยเห็นได้', en: 'Apply it to problems you have not seen before' },
+      ],
+    };
+  });
 
 export { nodes };
 

@@ -295,6 +295,7 @@ export const continueLearning = [
   { projectId: 'p1', courseId: 's2', nodeId: 'l31', leftSec: 126 },
   { projectId: 'p2', courseId: 'p2-c1', nodeId: 'p2-c1-g1-c2', leftSec: 302 },
   { projectId: 'p3', courseId: 'p3-c1', nodeId: 'p3-c1-g1-c2', leftSec: 214 },
+  { projectId: 'p4', courseId: 'p4-c1', nodeId: 'p4-c1-c3', leftSec: 391 },
 ];
 
 /**
@@ -365,7 +366,7 @@ export const lessonDetail = {
     { th: 'รู้ว่าเมื่อไหร่ควรเปลี่ยนอัลกอริทึม', en: 'Know when to reach for a different algorithm' },
   ],
   resources: [
-    { id: 'r1', type: 'pdf', name: { th: 'สไลด์บทเรียนที่ 9', en: 'Lesson 9 slides' }, sizeKb: 1840 },
+    { id: 'r1', type: 'pdf', name: { th: 'สไลด์ประกอบบทเรียน', en: 'Lesson slides' }, sizeKb: 1840 },
     { id: 'r2', type: 'code', name: { th: 'โน้ตบุ๊กตัวอย่าง (.ipynb)', en: 'Companion notebook (.ipynb)' }, sizeKb: 96 },
     { id: 'r3', type: 'data', name: { th: 'ชุดข้อมูลฝึกหัด (.csv)', en: 'Practice dataset (.csv)' }, sizeKb: 512 },
   ],
