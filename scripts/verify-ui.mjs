@@ -236,9 +236,12 @@ for (const project of projects) {
     await page.waitForTimeout(500);
     if (pathOf().endsWith('/browse')) steps++;
   }
+  // levels.length - 1 เพราะกล่องชั้นล่างสุดตัดตรงไปหน้าสื่อ ซึ่งมีลิสต์สื่ออยู่ข้างแล้ว
+  // ยังเป็นค่าที่มาจากข้อมูลล้วน ไม่มีเลขไหนเขียนไว้ในหน้าจอ
+  const expected = project.levels.length - 1;
   check(
-    `${project.id}: ${steps} drill-down pages = levels.length (${project.levels.length})`,
-    steps === project.levels.length && pathOf().endsWith('/lesson'),
+    `${project.id}: ${steps} drill-down pages = levels.length - 1 (${expected})`,
+    steps === expected && pathOf().endsWith('/lesson'),
   );
 
   // ป้ายชั้นต้องเป็นคำของโครงการนี้จริง ไม่ใช่คำกลางที่ใช้ร่วมกันทุกโครงการ

@@ -5,16 +5,26 @@ import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { ProgressBar } from '@/components/ProgressBar';
 
-/** แถว "เรียนต่อจากที่ค้างไว้" — การ์ดกว้างที่ต่างจากกริดวิชาด้านล่างอย่างชัดเจน */
-export function ContinueRow({ onOpen }) {
+/**
+ * แถว "เรียนต่อจากที่ค้างไว้" — การ์ดกว้างที่ต่างจากกริดวิชาด้านล่างอย่างชัดเจน
+ *
+ * แสดงเฉพาะของโครงการที่กำลังเปิดอยู่
+ * เพราะหน้านี้เป็นหน้าในบริบทของโครงการเดียว การโผล่คอร์สข้ามโครงการมาจะสับสน
+ * ว่าตกลงกำลังดูอะไรอยู่ และกดแล้วจะเด้งออกไปอีกโครงการโดยไม่ได้ตั้งใจ
+ */
+export function ContinueRow({ projectId, onOpen }) {
   const { t, p } = useI18n();
+  const items = continueLearning.filter((item) => item.projectId === projectId);
+
+  // ไม่มีอะไรค้างอยู่ก็ไม่ต้องมีหัวข้อลอยๆ ให้เกะกะ
+  if (items.length === 0) return null;
 
   return (
     <section>
       <h2 className="ui-heading mb-3 text-lg">{t('subjects.continueTitle')}</h2>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {continueLearning.map((item) => {
+        {items.map((item) => {
           const course = getNode(item.courseId);
           // สื่อหายได้ (ตั้งใจให้มีรายการหนึ่งชี้ไปที่ของที่ไม่มีจริง) แต่คอร์สหายแปลว่าแถวนี้ไร้ความหมาย
           const node = getNode(item.nodeId);

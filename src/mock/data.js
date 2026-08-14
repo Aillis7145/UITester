@@ -293,6 +293,8 @@ export const subjects = [
 export const continueLearning = [
   { projectId: 'p1', courseId: 's1', nodeId: 'l9', leftSec: 448 },
   { projectId: 'p1', courseId: 's2', nodeId: 'l31', leftSec: 126 },
+  { projectId: 'p2', courseId: 'p2-c1', nodeId: 'p2-c1-g1-c2', leftSec: 302 },
+  { projectId: 'p3', courseId: 'p3-c1', nodeId: 'p3-c1-g1-c2', leftSec: 214 },
 ];
 
 /**

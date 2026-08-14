@@ -90,7 +90,7 @@ export function LessonScreen({ onNavigate }) {
             groups={groups}
             currentId={content.id}
             title={p(parent.title)}
-            onSelect={(n) => onNavigate?.(...targetFor(n))}
+            onSelect={(n) => onNavigate?.(...targetFor(n, project))}
             onTakeQuiz={() => onNavigate?.('quiz')}
           />
         </aside>

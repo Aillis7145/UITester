@@ -109,9 +109,8 @@ export function SubjectsScreen({ onNavigate }) {
         {/* ส่ง item ต่อไปจริงๆ แล้ว — เดิมทิ้งไปทั้งก้อนแล้วเปิดบทเรียนตัวเดียวกันเสมอ
             รายการเรียนต่ออาจอยู่คนละโครงการ จึงต้องพา project ไปด้วย */}
         <ContinueRow
-          onOpen={(item) =>
-            onNavigate?.('lesson', { project: item.projectId, node: item.nodeId })
-          }
+          projectId={project.id}
+          onOpen={(item) => onNavigate?.('lesson', { node: item.nodeId })}
         />
       </div>
 
@@ -160,7 +159,7 @@ export function SubjectsScreen({ onNavigate }) {
               <SubjectCard
                 key={course.id}
                 node={course}
-                onOpen={() => onNavigate?.(...targetFor(course))}
+                onOpen={() => onNavigate?.(...targetFor(course, project))}
               />
             ))}
           </div>

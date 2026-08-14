@@ -23,8 +23,13 @@ import { Skeleton } from '@/components/Skeleton';
  * หน้าไล่ระดับ — หน้าเดียวที่รับได้ทุกชั้นของทุกโครงการ
  *
  * นี่คือจุดที่ทำให้ "flow ไม่ตายตัว" เป็นจริง
- * โครงการ 3 ชั้นเข้าหน้านี้ 3 ครั้ง โครงการ 2 ชั้นเข้า 2 ครั้ง โดยไม่มีเงื่อนไขไหนในโค้ดรู้เลขนั้น
- * สิ่งเดียวที่หน้านี้ถามคือ "ชั้นถัดจากชั้นของ node นี้คืออะไร" ซึ่งตอบโดย projects.js
+ * โครงการ 3 ชั้นเข้าหน้านี้ 2 ครั้ง โครงการ 2 ชั้นเข้า 1 ครั้ง (= levels.length - 1)
+ * เพราะกล่องชั้นล่างสุดตัดตรงไปหน้าสื่อซึ่งมีลิสต์อยู่ข้างแล้ว — ดู targetFor ใน nav.js
+ * ไม่มีเงื่อนไขไหนในโค้ดรู้เลขพวกนี้ สิ่งเดียวที่หน้านี้ถามคือ
+ * "ชั้นถัดจากชั้นของ node นี้คืออะไร" ซึ่งตอบโดย projects.js
+ *
+ * กิ่ง isLeafList ยังอยู่เพื่อรองรับการลิงก์ตรงเข้ากล่องชั้นล่างสุด
+ * (สตูดิโอเปิด /showcase/x/browse ได้ทุกเมื่อ) แต่การกดตามปกติจะไม่ผ่านทางนี้แล้ว
  */
 export function BrowseScreen({ onNavigate }) {
   const { t, p } = useI18n();
@@ -71,7 +76,7 @@ export function BrowseScreen({ onNavigate }) {
             <Button
               size="sm"
               icon="play"
-              onClick={() => onNavigate?.(...targetFor(resume))}
+              onClick={() => onNavigate?.(...targetFor(resume, project))}
               className="shrink-0"
             >
               {progress > 0 ? t('browse.resume') : t('browse.start')}
@@ -101,7 +106,7 @@ export function BrowseScreen({ onNavigate }) {
               <ContentRow
                 key={child.id}
                 node={child}
-                onSelect={(n) => onNavigate?.(...targetFor(n))}
+                onSelect={(n) => onNavigate?.(...targetFor(n, project))}
               />
             ))}
           </ul>
@@ -111,7 +116,7 @@ export function BrowseScreen({ onNavigate }) {
               <SubjectCard
                 key={child.id}
                 node={child}
-                onOpen={() => onNavigate?.(...targetFor(child))}
+                onOpen={() => onNavigate?.(...targetFor(child, project))}
               />
             ))}
           </div>
@@ -122,7 +127,7 @@ export function BrowseScreen({ onNavigate }) {
                 key={child.id}
                 node={child}
                 levelLabel={childLabel}
-                onOpen={() => onNavigate?.(...targetFor(child))}
+                onOpen={() => onNavigate?.(...targetFor(child, project))}
               />
             ))}
           </div>

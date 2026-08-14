@@ -16,7 +16,7 @@ import { cn } from '@/lib/cn';
  */
 const NAV_IDS = APP_NAV_IDS;
 
-export function AppBar({ current, onNavigate }) {
+export function AppBar({ current, onNavigate, showNav = true }) {
   const { t } = useI18n();
 
   return (
@@ -27,7 +27,7 @@ export function AppBar({ current, onNavigate }) {
           {/* แบรนด์ */}
           <button
             type="button"
-            onClick={() => onNavigate?.('subjects')}
+            onClick={() => onNavigate?.(showNav ? 'subjects' : 'projects')}
             className="ui-focusable flex shrink-0 items-center gap-2 rounded-ui pr-1"
           >
             <span className="grid h-8 w-8 place-items-center rounded-ui bg-primary text-on-primary">
@@ -36,38 +36,44 @@ export function AppBar({ current, onNavigate }) {
             <span className="ui-heading text-sm max-md:sr-only">{t('login.brand')}</span>
           </button>
 
-          {/* โครงการที่กำลังดูอยู่ + ทางสลับ — วางติดแบรนด์เพราะเป็นบริบทที่ครอบทุกอย่างด้านล่าง */}
-          <ProjectMenu onNavigate={onNavigate} />
+          {/* โครงการที่กำลังดูอยู่ + ทางสลับ — วางติดแบรนด์เพราะเป็นบริบทที่ครอบทุกอย่างด้านล่าง
+              ซ่อนในหน้าเลือกโครงการ เพราะที่นั่นทั้งหน้าคือตัวเลือกโครงการอยู่แล้ว */}
+          {showNav && <ProjectMenu onNavigate={onNavigate} />}
 
           {/* เมนูหลัก — เลื่อนแนวนอนได้บนจอเล็กแทนที่จะยุบเป็นแฮมเบอร์เกอร์
-              เพราะมีแค่ 4 รายการ การซ่อนไว้ทำให้กดยากกว่าเดิม */}
-          <nav aria-label={t('nav.pages')} className="min-w-0 flex-1">
-            <ul className="flex gap-1 overflow-x-auto px-1 py-1.5">
-              {NAV_IDS.map((id) => {
-                const active = id === current;
-                return (
-                  <li key={id}>
-                    <button
-                      type="button"
-                      onClick={() => onNavigate?.(id)}
-                      aria-current={active ? 'page' : undefined}
-                      className={cn(
-                        'ui-interactive ui-focusable flex shrink-0 items-center gap-1.5 rounded-ui px-3 py-2 text-sm font-semibold',
-                        // ไทยไม่มีเว้นวรรคระหว่างคำ ถ้าไม่ล็อกไว้จะถูกตัดกลางคำเมื่อแถบแคบ
-                        'whitespace-nowrap',
-                        active
-                          ? 'bg-primary text-on-primary shadow-raised'
-                          : 'text-muted hover:text-text',
-                      )}
-                    >
-                      <Icon name={PAGE_ICONS[id]} size={15} />
-                      {t(`pages.${id}`)}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
+              เพราะมีแค่ 4 รายการ การซ่อนไว้ทำให้กดยากกว่าเดิม
+              ไม่มีเมนูก็ยังต้องมี div กินที่ไว้ ไม่งั้นเครื่องมือฝั่งขวาจะเลื่อนมาชิดแบรนด์ */}
+          {showNav ? (
+            <nav aria-label={t('nav.pages')} className="min-w-0 flex-1">
+              <ul className="flex gap-1 overflow-x-auto px-1 py-1.5">
+                {NAV_IDS.map((id) => {
+                  const active = id === current;
+                  return (
+                    <li key={id}>
+                      <button
+                        type="button"
+                        onClick={() => onNavigate?.(id)}
+                        aria-current={active ? 'page' : undefined}
+                        className={cn(
+                          'ui-interactive ui-focusable flex shrink-0 items-center gap-1.5 rounded-ui px-3 py-2 text-sm font-semibold',
+                          // ไทยไม่มีเว้นวรรคระหว่างคำ ถ้าไม่ล็อกไว้จะถูกตัดกลางคำเมื่อแถบแคบ
+                          'whitespace-nowrap',
+                          active
+                            ? 'bg-primary text-on-primary shadow-raised'
+                            : 'text-muted hover:text-text',
+                        )}
+                      >
+                        <Icon name={PAGE_ICONS[id]} size={15} />
+                        {t(`pages.${id}`)}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          ) : (
+            <div className="flex-1" />
+          )}
 
           {/* เครื่องมือฝั่งขวา — กระดิ่งกับโปรไฟล์กดเปิดเมนูได้จริง */}
           <div className="flex shrink-0 items-center gap-1.5">

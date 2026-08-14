@@ -1,7 +1,9 @@
 import { useI18n } from '@/i18n/I18nProvider';
 import { useScreenState } from './screenState';
+import { user } from '@/mock/data';
 import { projects } from '@/mock/projects';
 import { rootsOf, contentCountOf, progressOf } from '@/mock/nodes';
+import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
 import { Icon } from '@/components/Icon';
 import { ProgressBar } from '@/components/ProgressBar';
@@ -22,12 +24,24 @@ export function ProjectsScreen({ onNavigate }) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-10 pb-24 sm:px-6 lg:px-8">
-      <header className="max-w-2xl">
-        <h1 className="ui-heading text-2xl sm:text-3xl">{t('project.title')}</h1>
-        <p className="mt-2 text-muted">{t('project.lead')}</p>
+      {/* ทักทายด้วยชื่อผู้เรียนเหมือนหน้าคอร์ส เพื่อให้รู้ว่าเข้าระบบสำเร็จแล้วจริง
+          ไม่ใช่แค่โดนโยนมาหน้าเลือกอะไรสักอย่าง */}
+      <header className="flex flex-wrap items-center gap-4">
+        <Avatar name={p(user.name)} size="lg" ring />
+        <div className="min-w-0 flex-1">
+          <h1 className="ui-heading text-2xl">
+            {t('subjects.greeting', { name: p(user.name).split(' ')[0] })} 👋
+          </h1>
+          <p className="text-muted">{t('project.lead')}</p>
+        </div>
+        <Badge tone="warn" icon="flame" className="max-sm:hidden">
+          {t('subjects.streak', { n: user.streakDays })}
+        </Badge>
       </header>
 
-      <div className="mt-7 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+      <h2 className="ui-heading mt-8 text-lg">{t('project.title')}</h2>
+
+      <div className="mt-4 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {projects.map((project) => {
           const courses = rootsOf(project.id);
           const total = courses.reduce((sum, c) => sum + contentCountOf(c.id), 0);
@@ -136,7 +150,7 @@ function ProjectsSkeleton() {
     <div className="mx-auto max-w-7xl px-4 pt-10 pb-24 sm:px-6 lg:px-8">
       <Skeleton className="h-8 w-72" />
       <Skeleton className="mt-2 h-5 w-96" />
-      <div className="mt-7 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="ui-surface overflow-hidden p-0">
             <Skeleton className="aspect-16/9 w-full rounded-none" />

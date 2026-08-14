@@ -18,8 +18,15 @@ export const PAGE_IDS = ['login', 'projects', 'subjects', 'browse', 'lesson', 'q
  */
 export const APP_NAV_IDS = ['subjects', 'lesson', 'quiz', 'results'];
 
-/** หน้าที่ไม่มีแถบเมนูของแอป — ประตูทางเข้าทั้งคู่ ผู้ใช้ยังไม่ได้อยู่ในคอร์สไหน */
-export const CHROMELESS_PAGES = ['login', 'projects'];
+/** หน้าที่ไม่มีแถบบนเลย — ยังไม่ได้เข้าระบบ จึงยังไม่มีอะไรให้ไป */
+export const CHROMELESS_PAGES = ['login'];
+
+/**
+ * หน้าที่มีแถบบนแต่ไม่มีเมนู (คอร์ส/บทเรียน/แบบทดสอบ/ผลสอบ) และไม่มีตัวสลับโครงการ
+ * หน้าเลือกโครงการยังไม่ได้อยู่ในโครงการไหน เมนูพวกนั้นจึงยังไม่มีความหมาย
+ * แต่ยังต้องมีแบรนด์กับเครื่องมือฝั่งขวา เพื่อให้รู้ว่าอยู่ในแอปเดียวกันไม่ใช่หลุดออกไปไหน
+ */
+export const NAVLESS_PAGES = ['projects'];
 
 /** ไอคอนของแต่ละหน้าใน nav ของสตูดิโอ */
 export const PAGE_ICONS = {

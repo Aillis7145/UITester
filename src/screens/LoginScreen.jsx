@@ -32,7 +32,10 @@ export function LoginScreen({ onNavigate }) {
     // จำลองการรอเซิร์ฟเวอร์ เพื่อให้เห็นสถานะกำลังโหลดของแต่ละธีม
     timer.current = setTimeout(() => {
       setSubmitting(false);
-      onNavigate?.('subjects');
+      // เข้าหน้าเลือกโครงการก่อนเสมอ ไม่ข้ามไปหน้าคอร์สเลย
+      // เพราะผู้เรียนอาจอยู่หลายโครงการ และแต่ละโครงการมีโครงสร้างเนื้อหาคนละแบบ
+      // ล้าง ?project/?node ที่ค้างอยู่ด้วย ไม่งั้นการล็อกอินใหม่จะพาไปโครงการเดิมของรอบก่อน
+      onNavigate?.('projects', { project: null, node: null });
     }, 900);
   };
 

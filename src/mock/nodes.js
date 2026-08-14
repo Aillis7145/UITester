@@ -217,7 +217,7 @@ function buildP1() {
  * สร้างคอร์สหนึ่งใบพร้อมลูกทั้งกิ่ง
  * childLevel มาจาก projects.js ไม่ได้ hardcode — p2 ใช้ 'module' ส่วน p3 ใช้ 'lesson'
  */
-function buildCourse(projectId, childLevel, i, course, groups) {
+function buildCourse(projectId, childLevel, i, total, course, groups) {
   const id = `${projectId}-c${i + 1}`;
   push({
     id,
@@ -248,21 +248,23 @@ function buildCourse(projectId, childLevel, i, course, groups) {
     // ห้ามล็อกทั้งคอร์ส ต่อให้ดูสมจริงกว่าก็ตาม
     // เพราะคอร์สที่ทุกชิ้นล็อกจะกดเข้าไปแล้วตัน ไล่ต่อไม่ได้เลยแม้แต่ชิ้นเดียว
     // (เจอตอนทดสอบเดินจริง คอร์สที่อัปเดตล่าสุดของโครงการที่ 2 ล็อกหมดทั้งใบ)
-    const state = i === 0 && gi === 0 ? 'watched' : i >= 6 && gi === groups.length - 1 ? 'locked' : 'idle';
+    // ล็อกเฉพาะกลุ่มท้ายของสองคอร์สท้าย คิดจากจำนวนคอร์สจริงไม่ใช่เลขตายตัว
+    // ไม่งั้นพอลดจำนวนระดับลง เงื่อนไขเดิมจะไม่โดนอะไรเลยแล้วทุกอย่างปลดล็อกหมด
+    const lockZone = i >= total - 2 && gi === groups.length - 1;
+    const state = i === 0 && gi === 0 ? 'watched' : lockZone ? 'locked' : 'idle';
     fillContent(projectId, gid, { th: gth, en: gen }, gi, i * 4 + gi, state);
   });
   return id;
 }
 
+/** HSK มีหกระดับพอดี ไม่ใส่คอร์สนอกระบบระดับปนเข้ามา */
 const P2_COURSES = [
-  { th: 'ระดับ 1 · ปูพื้นฐาน', en: 'Level 1 · Foundations', sub: ['พินอินและคำทักทาย', 'Pinyin and greetings'] },
-  { th: 'ระดับ 2 · คำศัพท์ในชีวิตประจำวัน', en: 'Level 2 · Everyday words', sub: ['ซื้อของ เดินทาง กินข้าว', 'Shopping, travel, food'] },
-  { th: 'ระดับ 3 · ประโยคที่ใช้บ่อย', en: 'Level 3 · Common sentences', sub: ['เล่าเรื่องและถามทาง', 'Telling and asking'] },
-  { th: 'ระดับ 4 · อ่านจับใจความ', en: 'Level 4 · Reading', sub: ['บทความสั้นและป้ายประกาศ', 'Short texts and signs'] },
-  { th: 'ระดับ 5 · เขียนเรียงความ', en: 'Level 5 · Writing', sub: ['ลำดับความคิดให้ชัด', 'Structuring your ideas'] },
-  { th: 'ระดับ 6 · ภาษาเชิงวิชาการ', en: 'Level 6 · Academic', sub: ['ศัพท์เฉพาะและสำนวน', 'Terms and idioms'] },
-  { th: 'ตะลุยข้อสอบเก่า', en: 'Past paper drills', sub: ['จับเวลาเสมือนจริง', 'Timed mock runs'] },
-  { th: 'เทคนิคก่อนสอบ', en: 'Exam-day tactics', sub: ['บริหารเวลาและความจำ', 'Time and memory'] },
+  { th: 'HSK ระดับ 1', en: 'HSK Level 1', sub: ['พินอินและคำทักทาย', 'Pinyin and greetings'] },
+  { th: 'HSK ระดับ 2', en: 'HSK Level 2', sub: ['ซื้อของ เดินทาง กินข้าว', 'Shopping, travel, food'] },
+  { th: 'HSK ระดับ 3', en: 'HSK Level 3', sub: ['เล่าเรื่องและถามทาง', 'Telling and asking directions'] },
+  { th: 'HSK ระดับ 4', en: 'HSK Level 4', sub: ['อ่านบทความสั้นและป้ายประกาศ', 'Short texts and signs'] },
+  { th: 'HSK ระดับ 5', en: 'HSK Level 5', sub: ['เขียนเรียงความให้ลำดับความคิดชัด', 'Structuring an essay'] },
+  { th: 'HSK ระดับ 6', en: 'HSK Level 6', sub: ['ศัพท์เฉพาะและสำนวนเชิงวิชาการ', 'Academic terms and idioms'] },
 ];
 
 const P2_GROUPS = [
@@ -271,15 +273,12 @@ const P2_GROUPS = [
   ['ฝึกฟังและออกเสียง', 'Listening and tones'],
 ];
 
+/** CEFR สี่ระดับตามที่โครงการเปิดสอนจริง ไม่มีระดับคั่นอย่าง B1+ */
 const P3_COURSES = [
-  { th: 'B1 · สนทนาในชีวิตประจำวัน', en: 'B1 · Everyday conversation', sub: ['เริ่มบทสนทนาได้เอง', 'Start a conversation'] },
-  { th: 'B1 · เล่าเรื่องและประสบการณ์', en: 'B1 · Telling stories', sub: ['เล่าอดีตให้ลื่นไหล', 'Talk about the past'] },
-  { th: 'B1+ · ภาษาในที่ทำงาน', en: 'B1+ · At work', sub: ['อีเมลและการประชุม', 'Email and meetings'] },
-  { th: 'B2 · แสดงความคิดเห็น', en: 'B2 · Giving opinions', sub: ['เห็นด้วยและโต้แย้ง', 'Agree and disagree'] },
-  { th: 'B2 · การนำเสนอ', en: 'B2 · Presenting', sub: ['เล่าให้คนฟังตาม', 'Hold the room'] },
-  { th: 'B2 · อ่านข่าวและบทความ', en: 'B2 · Reading the news', sub: ['จับประเด็นได้เร็ว', 'Find the point fast'] },
-  { th: 'B2+ · เจรจาต่อรอง', en: 'B2+ · Negotiating', sub: ['พูดให้ได้ผลลัพธ์', 'Talk to a result'] },
-  { th: 'ฝึกสำเนียงและจังหวะ', en: 'Accent and rhythm', sub: ['ฟังรู้เรื่อง พูดคนเข้าใจ', 'Be understood'] },
+  { th: 'A1 · เริ่มต้นจากศูนย์', en: 'A1 · Starting from zero', sub: ['ทักทายและแนะนำตัว', 'Greetings and introductions'] },
+  { th: 'A2 · สื่อสารเรื่องใกล้ตัว', en: 'A2 · Everyday basics', sub: ['ซื้อของ เดินทาง นัดหมาย', 'Shopping, travel, plans'] },
+  { th: 'B1 · สนทนาในชีวิตประจำวัน', en: 'B1 · Everyday conversation', sub: ['เล่าเรื่องและเริ่มบทสนทนาเอง', 'Tell stories, start conversations'] },
+  { th: 'B2 · แสดงความคิดเห็นและนำเสนอ', en: 'B2 · Opinions and presenting', sub: ['โต้แย้งและเล่าให้คนฟังตาม', 'Argue a point, hold the room'] },
 ];
 
 const P3_GROUPS = [
@@ -306,7 +305,8 @@ function buildP2() {
       'p2',
       'module',
       i,
-      shape(c, 'english', 'book', 355, teacher, { th: i < 3 ? 'เริ่มต้น' : 'ปานกลาง', en: i < 3 ? 'Beginner' : 'Intermediate' }, [
+      P2_COURSES.length,
+      shape(c, 'english', 'book', 355, teacher, { th: i < 2 ? 'เริ่มต้น' : i < 4 ? 'ปานกลาง' : 'ขั้นสูง', en: i < 2 ? 'Beginner' : i < 4 ? 'Intermediate' : 'Advanced' }, [
         { th: 'HSK', en: 'HSK' },
         { th: 'คำศัพท์', en: 'Vocabulary' },
       ]),
@@ -322,7 +322,8 @@ function buildP3() {
       'p3',
       'lesson',
       i,
-      shape(c, 'english', 'globe', 25, teacher, { th: i < 3 ? 'ปานกลาง' : 'ขั้นสูง', en: i < 3 ? 'Intermediate' : 'Advanced' }, [
+      P3_COURSES.length,
+      shape(c, 'english', 'globe', 25, teacher, { th: i < 2 ? 'เริ่มต้น' : 'ปานกลาง', en: i < 2 ? 'Beginner' : 'Intermediate' }, [
         { th: 'CEFR', en: 'CEFR' },
         { th: 'การพูด', en: 'Speaking' },
       ]),
