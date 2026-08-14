@@ -481,18 +481,59 @@ for (const w of [1920, 1536, 1440, 1280, 1024, 768, 640]) {
 }
 await page.setViewportSize({ width: 1600, height: 1000 });
 
-// มุมบนของเวทีต้องมนตามการ์ด และต้องเป็น "ความมนของสตูดิโอ" ไม่ใช่ของธีมที่กำลังพรีวิว
+// เวทีอยู่ "ฝั่งขวา" ของการ์ดในจอกว้าง มุมที่ติดขอบการ์ด (ขวาบน/ขวาล่าง) จึงต้องมนตามการ์ด
+// ส่วนมุมที่หันเข้าด้านใน (ซ้ายบน/ซ้ายล่าง) ต้องเหลี่ยม ไม่งั้นจะเห็นรอยบากกลางการ์ด
+// ความมนต้องเป็นของสตูดิโอ ไม่ใช่ของธีมที่กำลังพรีวิว (สองค่านี้ไม่เท่ากัน)
 const corner = await page.evaluate(() => {
   const art = document.querySelector('article[id^="variant-"]');
-  const frame = art.querySelector(':scope > [data-theme]');
+  const frame = art.querySelector('.lab-card-body > [data-theme]');
+  const c = getComputedStyle(art);
+  const f = getComputedStyle(frame);
   return {
-    card: getComputedStyle(art).borderTopLeftRadius,
-    top: getComputedStyle(frame).borderTopLeftRadius,
-    bottom: getComputedStyle(frame).borderBottomLeftRadius,
+    card: c.borderTopRightRadius,
+    outerTop: f.borderTopRightRadius,
+    outerBottom: f.borderBottomRightRadius,
+    innerTop: f.borderTopLeftRadius,
+    innerBottom: f.borderBottomLeftRadius,
+    // การ์ดต้องเรียงเป็นคอลัมน์เดียว — หนึ่งใบต่อหนึ่งแถว
+    perRow: new Set(
+      [...document.querySelectorAll('article[id^="variant-"]')].map((a) =>
+        Math.round(a.getBoundingClientRect().top),
+      ),
+    ).size,
+    total: document.querySelectorAll('article[id^="variant-"]').length,
   };
 });
-check(`lab: stage top corner matches the card (${corner.top} = ${corner.card})`, corner.top === corner.card);
-check(`lab: stage bottom corner is square (${corner.bottom})`, corner.bottom === '0px');
+check(
+  `lab: stage outer corners match the card (${corner.outerTop}/${corner.outerBottom} = ${corner.card})`,
+  corner.outerTop === corner.card && corner.outerBottom === corner.card,
+);
+check(
+  `lab: stage inner corners are square (${corner.innerTop}/${corner.innerBottom})`,
+  corner.innerTop === '0px' && corner.innerBottom === '0px',
+);
+check(
+  `lab: one card per row (${corner.total} cards on ${corner.perRow} rows)`,
+  corner.perRow === corner.total,
+);
+
+// กางแผงโค้ดแล้วการ์ดต้องกว้างเท่าเดิม
+// grid item มี min-width: auto โดยปริยาย โค้ดบรรทัดยาว (white-space: pre) จึงดันการ์ดกว้างเกินคอลัมน์
+// ลากเวทีกว้างตามจนล้นออกนอกจอ — เจอตอนจัดเลย์เอาต์เป็นหนึ่งการ์ดต่อแถว
+const widthBefore = await page.evaluate(() =>
+  Math.round(document.querySelector('article[id^="variant-"]').getBoundingClientRect().width),
+);
+await page.getByRole('button', { name: /ดูโค้ด/ }).first().click();
+await page.waitForTimeout(500);
+const afterCode = await page.evaluate(() => ({
+  width: Math.round(document.querySelector('article[id^="variant-"]').getBoundingClientRect().width),
+  scrollbar: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+}));
+check(
+  `lab: opening the code panel does not widen the card (${widthBefore} → ${afterCode.width})`,
+  widthBefore === afterCode.width,
+);
+check('lab: code panel adds no page scrollbar', !afterCode.scrollbar);
 
 // ฉากคลุมของคอมมานด์พาเลตต์ต้องเท่ากับเวที — เดิมอ้างกับตัวห่อขนาดปุ่ม 240×44 แล้วแผงหลุดออกทั้งใบ
 await page.locator('#variant-dd-command-palette .preview-stage button').first().click();

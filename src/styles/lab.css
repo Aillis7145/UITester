@@ -39,12 +39,43 @@
    overflow: hidden เดิมมีไว้กันมุมเหลี่ยมของเวทีโผล่พ้นมุมมนการ์ดเท่านั้น
    จึงแก้ด้วยการมนเฉพาะสองมุมบนของเวทีแทน ได้ผลเดียวกันโดยไม่ตัดอะไรเลย
    ============================================================ */
-.lab-card > [data-theme] {
+/* grid item มี min-width: auto โดยปริยาย เนื้อหาที่ไม่ตัดบรรทัด (แผงโค้ด white-space: pre)
+   จึงดันการ์ดให้กว้างเกินคอลัมน์ได้ ลากทั้งเวทีกว้างตามจนล้นออกนอกจอ
+   min-width: 0 บังคับให้การ์ดกว้างเท่าคอลัมน์เสมอ แล้วปล่อยให้แผงโค้ดเลื่อนในกล่องตัวเอง */
+.lab-card {
+  min-width: 0;
+}
+
+/* body สืบความมนจากการ์ด เพื่อให้เวทีข้างในสืบต่อได้อีกทอด */
+.lab-card-body {
   border-radius: inherit;
+}
+
+/* เวทีทาสีพื้นของธีม จึงต้องมนเฉพาะมุมที่ "ติดขอบการ์ด" ส่วนมุมที่หันเข้าด้านในต้องเหลี่ยม
+   ไม่งั้นจะเห็นรอยบากกลางการ์ด — จอแคบเวทีอยู่ล่าง จึงมนสองมุมล่าง */
+.lab-card-body > [data-theme] {
+  border-radius: inherit;
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+}
+
+/* จอกว้างเวทีย้ายไปอยู่ขวา มุมที่ติดขอบการ์ดจึงเปลี่ยนเป็นสองมุมขวา
+   ต้องตรงกับ breakpoint lg ของกริดใน VariantCard เป๊ะ ไม่งั้นมุมจะเพี้ยนช่วงคาบเกี่ยว */
+@media (min-width: 64rem) {
+  .lab-card-body > [data-theme] {
+    border-start-start-radius: 0;
+    border-start-end-radius: inherit;
+    border-end-start-radius: 0;
+  }
+}
+
+/* กางโค้ดอยู่ ขอบล่างของเวทีต้องเหลี่ยม เพราะมีแผงโค้ดต่อท้ายด้านล่าง */
+.lab-card:has(.lab-code) .lab-card-body > [data-theme] {
   border-end-start-radius: 0;
   border-end-end-radius: 0;
 }
-/* กันไว้เผื่อบล็อกสุดท้ายของการ์ดมีพื้นหลังเป็นของตัวเองในอนาคต */
+
+/* บล็อกสุดท้ายของการ์ดต้องมนตามมุมล่างเสมอ ไม่ว่าจะเป็น body หรือแผงโค้ด */
 .lab-card > :last-child {
   border-end-start-radius: inherit;
   border-end-end-radius: inherit;

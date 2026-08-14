@@ -17,7 +17,7 @@ export function CodePanel({ variant }) {
   const both = variant.css ? `/* CSS */\n${variant.css.trim()}\n\n/* JSX */\n${variant.code}` : variant.code;
 
   return (
-    <div className="border-t border-border">
+    <div className="lab-code border-t border-border">
       <div className="flex flex-wrap gap-2 p-3">
         <CopyButton copied={copiedJsx} onClick={() => copyJsx(variant.code)} label={t('lab.copyJsx')} />
         {variant.css && (
