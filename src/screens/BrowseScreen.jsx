@@ -13,6 +13,7 @@ import {
 import { SubjectCard } from './parts/SubjectCard';
 import { NodeCard } from './parts/NodeCard';
 import { ContentRow } from './parts/ContentRow';
+import { Badge } from '@/components/Badge';
 import { Breadcrumb } from '@/components/Breadcrumb';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
@@ -54,23 +55,25 @@ export function BrowseScreen({ onNavigate }) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-6 pb-24 sm:px-6 lg:px-8">
-      <Breadcrumb items={crumbsFor({ project, node, onNavigate, p })} />
+      <Breadcrumb items={crumbsFor({ project, node, onNavigate, p, t })} />
 
       {/* ---------- หัวเรื่องของกล่องที่กำลังเปิดอยู่ ---------- */}
       <header className="mt-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
           {ownDef ? `${p(ownDef.label)} ${node.order}` : p(project.name)}
         </p>
-        <h1 className="ui-heading mt-1 text-2xl sm:text-3xl">{p(node.title)}</h1>
+        {/* แท็กวิชาข้างหัวเรื่อง — เป็นที่ที่สองและที่สุดท้ายที่วิชาโผล่ในแอป (อีกที่คือบนการ์ด)
+            เส้นทางด้านบนขึ้นต้นด้วย "คอร์สทั้งหมด" เสมอ จึงไม่ได้บอกว่ากำลังอยู่วิชาไหน */}
+        <div className="mt-1 flex flex-wrap items-center gap-2.5">
+          <h1 className="ui-heading text-2xl sm:text-3xl">{p(node.title)}</h1>
+          <Badge tone="primary" size="sm" icon={project.icon}>
+            {p(project.short)}
+          </Badge>
+        </div>
         {node.subtitle && <p className="mt-2 max-w-2xl text-muted">{p(node.subtitle)}</p>}
 
         <div className="mt-4 flex flex-wrap items-center gap-4">
-          <div className="flex min-w-52 flex-1 items-center gap-2.5">
-            <ProgressBar value={progress} size="sm" label={p(node.title)} className="flex-1" />
-            <span className="shrink-0 text-sm font-semibold text-primary-ink">
-              {Math.round(progress * 100)}%
-            </span>
-          </div>
+          <ProgressBar value={progress} size="sm" showLabel className="min-w-52 flex-1" />
           <span className="flex items-center gap-1.5 text-sm text-muted">
             <Icon name="list" size={14} />
             {t('browse.inside', { n: contentCountOf(node.id) })}
@@ -79,7 +82,7 @@ export function BrowseScreen({ onNavigate }) {
             <Button
               size="sm"
               icon="play"
-              onClick={() => onNavigate?.(...targetFor(resume, project))}
+              onClick={() => onNavigate?.(...targetFor(resume))}
               className="shrink-0"
             >
               {progress > 0 ? t('browse.resume') : t('browse.start')}
@@ -109,7 +112,7 @@ export function BrowseScreen({ onNavigate }) {
               <ContentRow
                 key={child.id}
                 node={child}
-                onSelect={(n) => onNavigate?.(...targetFor(n, project))}
+                onSelect={(n) => onNavigate?.(...targetFor(n))}
               />
             ))}
           </ul>
@@ -119,18 +122,20 @@ export function BrowseScreen({ onNavigate }) {
               <SubjectCard
                 key={child.id}
                 node={child}
-                onOpen={() => onNavigate?.(...targetFor(child, project))}
+                onOpen={() => onNavigate?.(...targetFor(child))}
               />
             ))}
           </div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-2">
+          // คอลัมน์ชุดเดียวกับกริดคอร์สในหน้า subjects โดยตั้งใจ
+          // การ์ดหน่วยมีรูปปกแล้ว จึงควรกวาดตาแบบเดียวกัน ไม่ใช่สองคอลัมน์กว้างๆ
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {children.map((child) => (
               <NodeCard
                 key={child.id}
                 node={child}
                 levelLabel={childLabel}
-                onOpen={() => onNavigate?.(...targetFor(child, project))}
+                onOpen={() => onNavigate?.(...targetFor(child))}
               />
             ))}
           </div>

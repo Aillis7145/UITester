@@ -1,9 +1,12 @@
 /**
- * ข้อมูลจำลองรวมศูนย์ของทั้ง 15 จอ
+ * ข้อมูลจำลองที่ไม่ใช่หลักสูตร — ผู้ใช้ ข้อสอบ ผลสอบ การแจ้งเตือน และตัวช่วยจัดรูปแบบ
+ *
+ * *** โครงสร้างหลักสูตรไม่ได้อยู่ที่นี่แล้ว ***
+ * วิชา คอร์ส หน่วย และสื่อทุกชิ้นมาจาก curriculum.js (แปลงจากสเปรดชีตจริง)
+ * แล้ว nodes.js ห่อเป็นโหนด — ที่นี่เหลือแต่ของที่ไม่มีในหลักสูตร
  *
  * เนื้อหาใช้ { th, en } inline อ่านผ่าน p() ของ useI18n — ไม่ใช่ i18n key
- * เพราะชื่อวิชาคือ "เนื้อหา" ไม่ใช่ "เปลือก UI"
- * ถ้ายัดเข้า locale การเพิ่มวิชา 1 ตัวจะกลายเป็นการแก้ 2 ไฟล์
+ * เพราะชื่อเรื่องคือ "เนื้อหา" ไม่ใช่ "เปลือก UI"
  */
 
 export const user = {
@@ -17,341 +20,6 @@ export const user = {
   level: 7,
 };
 
-export const categories = [
-  { id: 'all', icon: 'grid', label: { th: 'ทั้งหมด', en: 'All' } },
-  { id: 'ai', icon: 'brain', label: { th: 'ไอที & เอไอ', en: 'IT & AI' } },
-  { id: 'math', icon: 'calculator', label: { th: 'คณิตศาสตร์', en: 'Mathematics' } },
-  { id: 'science', icon: 'atom', label: { th: 'วิทยาศาสตร์', en: 'Science' } },
-  { id: 'thai', icon: 'book', label: { th: 'ภาษาไทย', en: 'Thai Language' } },
-  { id: 'english', icon: 'globe', label: { th: 'ภาษาอังกฤษ', en: 'English' } },
-  { id: 'social', icon: 'users', label: { th: 'สังคมศึกษา', en: 'Social Studies' } },
-];
-
-export const subjects = [
-  {
-    id: 's1',
-    cover: '/mock/ai.jpg',
-    categoryId: 'ai',
-    icon: 'brain',
-    hue: 195,
-    title: { th: 'พื้นฐานปัญญาประดิษฐ์ (AI)', en: 'Foundations of Artificial Intelligence' },
-    subtitle: { th: 'เรียนรู้ AI ตั้งแต่เริ่มต้นจนสร้างโมเดลแรกได้', en: 'From zero to your first model' },
-    instructor: { th: 'ดร. ปิยะพงษ์ วัฒนกุล', en: 'Dr. Piyapong Wattanakul' },
-    level: { th: 'เริ่มต้น', en: 'Beginner' },
-    lessonCount: 24,
-    durationMin: 380,
-    progress: 0.33,
-    rating: 4.8,
-    enrolled: 1284,
-    updatedAt: '2026-07-28',
-    tags: [
-      { th: 'Machine Learning', en: 'Machine Learning' },
-      { th: 'Python', en: 'Python' },
-    ],
-  },
-  {
-    id: 's2',
-    cover: '/mock/python.jpg',
-    categoryId: 'ai',
-    icon: 'code',
-    hue: 265,
-    title: { th: 'ไพทอนสำหรับงานข้อมูล', en: 'Python for Data Work' },
-    subtitle: { th: 'จัดการข้อมูลจริงด้วย pandas และ numpy', en: 'Real data wrangling with pandas and numpy' },
-    instructor: { th: 'อ. สุชาดา ภูวเดช', en: 'Suchada Phuwadech' },
-    level: { th: 'เริ่มต้น', en: 'Beginner' },
-    lessonCount: 18,
-    durationMin: 290,
-    progress: 0.62,
-    rating: 4.7,
-    enrolled: 2140,
-    updatedAt: '2026-08-02',
-    tags: [
-      { th: 'Python', en: 'Python' },
-      { th: 'Data', en: 'Data' },
-    ],
-  },
-  {
-    id: 's3',
-    cover: '/mock/prompt.jpg',
-    categoryId: 'ai',
-    icon: 'sparkle',
-    hue: 315,
-    title: { th: 'การเขียนพรอมต์ให้ได้ผล', en: 'Practical Prompt Engineering' },
-    subtitle: { th: 'ใช้โมเดลภาษาให้ทำงานได้จริงในงานประจำวัน', en: 'Make language models actually useful' },
-    instructor: { th: 'ธนกฤต อินทรโชติ', en: 'Thanakrit Intarachot' },
-    level: { th: 'ปานกลาง', en: 'Intermediate' },
-    lessonCount: 12,
-    durationMin: 165,
-    progress: 0,
-    rating: 4.9,
-    enrolled: 3502,
-    updatedAt: '2026-08-08',
-    tags: [
-      { th: 'LLM', en: 'LLM' },
-      { th: 'Productivity', en: 'Productivity' },
-    ],
-  },
-  {
-    id: 's4',
-    cover: '/mock/webdev.jpg',
-    categoryId: 'ai',
-    icon: 'layers',
-    hue: 155,
-    title: { th: 'พัฒนาเว็บสมัยใหม่', en: 'Modern Web Development' },
-    subtitle: { th: 'React, Tailwind และการทำเว็บที่ใช้งานได้จริง', en: 'React, Tailwind and shipping real sites' },
-    instructor: { th: 'กันตพงศ์ เรืองฤทธิ์', en: 'Kantapong Ruangrit' },
-    level: { th: 'ปานกลาง', en: 'Intermediate' },
-    lessonCount: 32,
-    durationMin: 520,
-    progress: 0.08,
-    rating: 4.6,
-    enrolled: 1876,
-    updatedAt: '2026-07-14',
-    tags: [
-      { th: 'React', en: 'React' },
-      { th: 'CSS', en: 'CSS' },
-    ],
-  },
-  {
-    id: 's5',
-    cover: '/mock/math.jpg',
-    categoryId: 'math',
-    icon: 'calculator',
-    hue: 25,
-    title: { th: 'คณิตศาสตร์ ม.3', en: 'Mathematics — Grade 9' },
-    subtitle: { th: 'อสมการ พาราโบลา และตรีโกณมิติเบื้องต้น', en: 'Inequalities, parabolas and intro trigonometry' },
-    instructor: { th: 'ครูวราภรณ์ ทองดี', en: 'Waraporn Thongdee' },
-    level: { th: 'ม.3', en: 'Grade 9' },
-    lessonCount: 28,
-    durationMin: 420,
-    progress: 0.45,
-    rating: 4.5,
-    enrolled: 984,
-    updatedAt: '2026-06-30',
-    tags: [
-      { th: 'พีชคณิต', en: 'Algebra' },
-      { th: 'ตรีโกณ', en: 'Trigonometry' },
-    ],
-  },
-  {
-    id: 's6',
-    cover: '/mock/physics.jpg',
-    categoryId: 'science',
-    icon: 'atom',
-    hue: 220,
-    title: { th: 'ฟิสิกส์ ม.5', en: 'Physics — Grade 11' },
-    subtitle: { th: 'คลื่น เสียง และแสงเชิงเรขาคณิต', en: 'Waves, sound and geometric optics' },
-    instructor: { th: 'ครูอนุชา บุญมาก', en: 'Anucha Boonmak' },
-    level: { th: 'ม.5', en: 'Grade 11' },
-    lessonCount: 22,
-    durationMin: 355,
-    progress: 0.15,
-    rating: 4.4,
-    enrolled: 762,
-    updatedAt: '2026-07-05',
-    tags: [
-      { th: 'คลื่น', en: 'Waves' },
-      { th: 'แสง', en: 'Optics' },
-    ],
-  },
-  {
-    id: 's7',
-    cover: '/mock/biology.jpg',
-    categoryId: 'science',
-    icon: 'flask',
-    hue: 145,
-    title: { th: 'ชีววิทยา ม.4', en: 'Biology — Grade 10' },
-    subtitle: { th: 'เซลล์ การแบ่งเซลล์ และพันธุกรรม', en: 'Cells, division and genetics' },
-    instructor: { th: 'ครูพิมพ์ชนก แสงทอง', en: 'Pimchanok Sangthong' },
-    level: { th: 'ม.4', en: 'Grade 10' },
-    lessonCount: 26,
-    durationMin: 400,
-    progress: 0,
-    rating: 4.6,
-    enrolled: 1102,
-    updatedAt: '2026-07-22',
-    tags: [
-      { th: 'เซลล์', en: 'Cells' },
-      { th: 'พันธุกรรม', en: 'Genetics' },
-    ],
-  },
-  {
-    id: 's8',
-    cover: '/mock/thai.jpg',
-    categoryId: 'thai',
-    icon: 'book',
-    hue: 40,
-    title: { th: 'ภาษาไทย: วรรณคดีไทย', en: 'Thai Literature' },
-    subtitle: { th: 'อ่านวรรณคดีให้เข้าใจทั้งเนื้อหาและกลวิธี', en: 'Reading classics for meaning and craft' },
-    instructor: { th: 'ครูสมพร จันทร์เพ็ญ', en: 'Somporn Chanpen' },
-    level: { th: 'ม.ปลาย', en: 'Upper secondary' },
-    lessonCount: 16,
-    durationMin: 240,
-    progress: 0.72,
-    rating: 4.3,
-    enrolled: 640,
-    updatedAt: '2026-05-18',
-    tags: [
-      { th: 'วรรณคดี', en: 'Literature' },
-      { th: 'การอ่าน', en: 'Reading' },
-    ],
-  },
-  {
-    id: 's9',
-    cover: '/mock/english.jpg',
-    categoryId: 'english',
-    icon: 'globe',
-    hue: 200,
-    title: { th: 'สนทนาภาษาอังกฤษในชีวิตจริง', en: 'Everyday English Conversation' },
-    subtitle: { th: 'พูดได้จริงในสถานการณ์ที่เจอบ่อย', en: 'Speak confidently in common situations' },
-    instructor: { th: 'Sarah Mitchell', en: 'Sarah Mitchell' },
-    level: { th: 'เริ่มต้น', en: 'Beginner' },
-    lessonCount: 20,
-    durationMin: 300,
-    progress: 0.25,
-    rating: 4.8,
-    enrolled: 2760,
-    updatedAt: '2026-08-01',
-    tags: [
-      { th: 'การพูด', en: 'Speaking' },
-      { th: 'คำศัพท์', en: 'Vocabulary' },
-    ],
-  },
-  {
-    id: 's10',
-    cover: '/mock/history.jpg',
-    categoryId: 'social',
-    icon: 'users',
-    hue: 300,
-    title: { th: 'ประวัติศาสตร์ไทย', en: 'Thai History' },
-    subtitle: { th: 'จากสุโขทัยถึงรัตนโกสินทร์', en: 'From Sukhothai to Rattanakosin' },
-    instructor: { th: 'ครูเอกรัตน์ พงษ์ไพบูลย์', en: 'Ekarat Pongpaiboon' },
-    level: { th: 'ม.ต้น', en: 'Lower secondary' },
-    lessonCount: 18,
-    durationMin: 270,
-    progress: 0,
-    rating: 4.2,
-    enrolled: 512,
-    updatedAt: '2026-04-26',
-    tags: [
-      { th: 'ประวัติศาสตร์', en: 'History' },
-      { th: 'อาณาจักร', en: 'Kingdoms' },
-    ],
-  },
-  {
-    id: 's11',
-    cover: '/mock/chemistry.jpg',
-    categoryId: 'science',
-    icon: 'flask',
-    hue: 90,
-    title: { th: 'เคมี ม.5', en: 'Chemistry — Grade 11' },
-    subtitle: { th: 'อัตราการเกิดปฏิกิริยาและสมดุลเคมี', en: 'Reaction rates and chemical equilibrium' },
-    instructor: { th: 'ครูณัฐวุฒิ สายทอง', en: 'Nattawut Saithong' },
-    level: { th: 'ม.5', en: 'Grade 11' },
-    lessonCount: 24,
-    durationMin: 380,
-    progress: 0.05,
-    rating: 4.5,
-    enrolled: 830,
-    updatedAt: '2026-07-11',
-    tags: [
-      { th: 'ปฏิกิริยา', en: 'Reactions' },
-      { th: 'สมดุล', en: 'Equilibrium' },
-    ],
-  },
-  {
-    id: 's12',
-    cover: '/mock/geography.jpg',
-    categoryId: 'social',
-    icon: 'globe',
-    hue: 175,
-    title: { th: 'ภูมิศาสตร์และสิ่งแวดล้อม', en: 'Geography & Environment' },
-    subtitle: { th: 'แผนที่ ภูมิอากาศ และการใช้ทรัพยากร', en: 'Maps, climate and resource use' },
-    instructor: { th: 'ครูมนัสนันท์ ศรีวิไล', en: 'Manatsanan Sriwilai' },
-    level: { th: 'ม.ต้น', en: 'Lower secondary' },
-    lessonCount: 14,
-    durationMin: 210,
-    progress: 0,
-    rating: 4.1,
-    enrolled: 388,
-    updatedAt: '2026-03-19',
-    tags: [
-      { th: 'แผนที่', en: 'Maps' },
-      { th: 'ภูมิอากาศ', en: 'Climate' },
-    ],
-  },
-];
-
-/**
- * สื่อที่กำลังเรียนค้างอยู่ — ใช้ในแถว "เรียนต่อ"
- *
- * เก็บทั้ง courseId และ nodeId เพราะทดสอบ fallback สองชั้นคนละแบบ:
- *   ไม่มีคอร์ส  → ทิ้งทั้งแถว
- *   ไม่มีสื่อ    → ยังเรนเดอร์ได้ด้วยรูปปกและคำโปรยของคอร์ส
- * รายการที่สองจึงชี้ไปที่ node ที่ไม่มีจริงโดยตั้งใจ ห้ามแก้ให้ถูก
- */
-export const continueLearning = [
-  { projectId: 'p1', courseId: 's1', nodeId: 'l9', leftSec: 448 },
-  { projectId: 'p1', courseId: 's2', nodeId: 'l31', leftSec: 126 },
-  { projectId: 'p2', courseId: 'p2-c1', nodeId: 'p2-c1-g1-c2', leftSec: 302 },
-  { projectId: 'p3', courseId: 'p3-c1', nodeId: 'p3-c1-g1-c2', leftSec: 214 },
-  { projectId: 'p4', courseId: 'p4-c1', nodeId: 'p4-c1-c3', leftSec: 391 },
-];
-
-/**
- * ชื่อไม่มีคำนำหน้าบอกชั้น ("บทที่ 1 ·") อีกแล้ว
- * เพราะ UI ประกอบ "{ป้ายชั้นของโครงการ} {order} · {title}" ให้เอง
- * โครงการที่เรียกชั้นนี้ว่า "หน่วย" จึงไม่ได้ข้อความว่า "หน่วย 1 · บทที่ 1 · รู้จักกับ AI"
- */
-export const sections = [
-  { id: 'sec1', subjectId: 's1', title: { th: 'รู้จักกับ AI', en: 'Meet AI' } },
-  { id: 'sec2', subjectId: 's1', title: { th: 'Machine Learning เบื้องต้น', en: 'ML Basics' } },
-  { id: 'sec3', subjectId: 's1', title: { th: 'Neural Networks', en: 'Neural Networks' } },
-];
-
-/** ภาพนิ่งของบทเรียน วนใช้ 6 ภาพ — พอให้เพลย์ลิสต์ดูมีชีวิตโดยไม่ต้องมี 24 ไฟล์ */
-const LESSON_STILLS = 6;
-
-const L = (id, sectionId, order, th, en, durationSec, state) => ({
-  id,
-  subjectId: 's1',
-  sectionId,
-  order,
-  title: { th, en },
-  durationSec,
-  thumb: `/mock/lesson-${((order - 1) % LESSON_STILLS) + 1}.jpg`,
-  watched: state === 'watched',
-  locked: state === 'locked',
-});
-
-export const lessons = [
-  L('l1', 'sec1', 1, 'AI คืออะไร และทำไมถึงสำคัญ', 'What is AI and why it matters', 742, 'watched'),
-  L('l2', 'sec1', 2, 'ประวัติย่อของปัญญาประดิษฐ์', 'A short history of AI', 615, 'watched'),
-  L('l3', 'sec1', 3, 'AI ในชีวิตประจำวันที่เราไม่ทันสังเกต', 'AI hiding in your daily life', 528, 'watched'),
-  L('l4', 'sec1', 4, 'แยกให้ออก: AI, ML และ Deep Learning', 'AI vs ML vs Deep Learning', 690, 'watched'),
-  L('l5', 'sec1', 5, 'จริยธรรมและอคติในระบบ AI', 'Ethics and bias in AI systems', 812, 'watched'),
-  L('l6', 'sec2', 6, 'ข้อมูลคือเชื้อเพลิงของโมเดล', 'Data is the fuel', 704, 'watched'),
-  L('l7', 'sec2', 7, 'Supervised Learning ทำงานอย่างไร', 'How supervised learning works', 866, 'watched'),
-  L('l8', 'sec2', 8, 'Unsupervised Learning และการจัดกลุ่ม', 'Unsupervised learning and clustering', 738, 'watched'),
-  L('l9', 'sec2', 9, 'ฝึกโมเดลแรกของคุณด้วย scikit-learn', 'Train your first model with scikit-learn', 742, 'current'),
-  L('l10', 'sec2', 10, 'วัดผลโมเดล: accuracy ยังไม่พอ', 'Evaluating models: accuracy is not enough', 690, 'idle'),
-  L('l11', 'sec2', 11, 'Overfitting และวิธีรับมือ', 'Overfitting and how to fight it', 612, 'idle'),
-  L('l12', 'sec2', 12, 'แบ่งข้อมูล train / validation / test', 'Splitting train / validation / test', 545, 'idle'),
-  L('l13', 'sec2', 13, 'Feature engineering เบื้องต้น', 'Intro to feature engineering', 798, 'idle'),
-  L('l14', 'sec2', 14, 'เลือกอัลกอริทึมให้เหมาะกับปัญหา', 'Choosing the right algorithm', 654, 'idle'),
-  L('l15', 'sec3', 15, 'นิวรอนเทียมทำงานอย่างไร', 'How an artificial neuron works', 720, 'idle'),
-  L('l16', 'sec3', 16, 'ชั้นซ่อนและฟังก์ชันกระตุ้น', 'Hidden layers and activation functions', 835, 'idle'),
-  L('l17', 'sec3', 17, 'Backpropagation แบบเข้าใจง่าย', 'Backpropagation made simple', 902, 'idle'),
-  L('l18', 'sec3', 18, 'Gradient Descent และ learning rate', 'Gradient descent and learning rate', 764, 'idle'),
-  L('l19', 'sec3', 19, 'สร้างเครือข่ายประสาทตัวแรก', 'Build your first neural network', 880, 'idle'),
-  L('l20', 'sec3', 20, 'CNN สำหรับงานภาพ', 'CNNs for image tasks', 940, 'idle'),
-  L('l21', 'sec3', 21, 'RNN และข้อมูลลำดับ', 'RNNs and sequential data', 812, 'locked'),
-  L('l22', 'sec3', 22, 'Transformer คือจุดเปลี่ยน', 'Transformers changed everything', 1020, 'locked'),
-  L('l23', 'sec3', 23, 'นำโมเดลขึ้นใช้งานจริง', 'Deploying a model to production', 875, 'locked'),
-  L('l24', 'sec3', 24, 'สรุปคอร์สและเส้นทางต่อไป', 'Wrap-up and where to go next', 480, 'locked'),
-];
-
-export const currentLessonId = 'l9';
 export const currentLessonProgressSec = 192;
 
 export const lessonDetail = {
@@ -427,6 +95,9 @@ export const lessonDetail = {
 
 export const quiz = {
   id: 'q1',
+  // ชุดตัวอย่างที่เขียนมือ ใช้กับทุกคอร์สที่ยังไม่มีชุดจริงจากไฟล์ Word
+  // QuizScreen ดูธงนี้เพื่อตัดสินใจว่าจะเปิดมาแบบ "ทำไปแล้วบางส่วน" หรือเริ่มข้อ 1
+  demo: true,
   // ผูกกับสื่อชนิดแบบทดสอบใน mock/nodes.js ไม่ผูกกับวิชาแล้ว
   // เพราะ "วิชา" เป็นชื่อชั้นของโครงการหนึ่งเท่านั้น โครงการอื่นเรียกชั้นนี้ว่าระดับ
   nodeId: 'q-p1',
@@ -727,21 +398,35 @@ export function isAnswerCorrect(question, selectedIds = []) {
   return want.length === got.length && want.every((v, i) => v === got[i]);
 }
 
-/** คำนวณผลสอบจาก quiz + คำตอบ — ไม่ hardcode คะแนน จึงไม่มีทางไม่ตรงกัน */
+/**
+ * คำนวณผลสอบจาก quiz + คำตอบ — ไม่ hardcode คะแนน จึงไม่มีทางไม่ตรงกัน
+ *
+ * ข้อเขียนกับข้อพูดไม่มีเฉลย (ไม่มี answerIds) จึง **ตรวจอัตโนมัติไม่ได้**
+ * ถ้านับรวมเข้าตัวหาร ผู้เรียนที่ตอบปรนัยถูกหมดจะได้ 16/20 ทั้งที่ไม่ได้ทำอะไรผิด
+ * แยกออกมาเป็น ungraded แล้วให้หน้าผลสอบบอกแยกว่า "อีกกี่ข้อรอตรวจ"
+ *
+ * รายชื่อหัวข้อมาจากชุดข้อสอบเองก่อน (quizDef.topics) แล้วค่อยถอยไปใช้ topics กลาง
+ * ชุดจริงแยกผลตาม "ทักษะ" ส่วนชุดตัวอย่างเดิมแยกตาม "หัวข้อ" — คนละแกนกัน
+ */
 export function scoreQuiz(quizDef = quiz, answers = submittedAnswers) {
-  const perQuestion = quizDef.questions.map((q) => ({
-    questionId: q.id,
-    topicId: q.topicId,
-    selectedIds: answers[q.id] ?? [],
-    correct: isAnswerCorrect(q, answers[q.id] ?? []),
-  }));
+  const perQuestion = quizDef.questions.map((q) => {
+    const graded = Array.isArray(q.answerIds) && q.answerIds.length > 0;
+    return {
+      questionId: q.id,
+      topicId: q.skill ?? q.topicId,
+      selectedIds: answers[q.id] ?? [],
+      graded,
+      correct: graded && isAnswerCorrect(q, answers[q.id] ?? []),
+    };
+  });
 
-  const score = perQuestion.filter((a) => a.correct).length;
-  const total = perQuestion.length;
+  const graded = perQuestion.filter((a) => a.graded);
+  const score = graded.filter((a) => a.correct).length;
+  const total = graded.length;
 
-  const byTopic = topics
+  const byTopic = (quizDef.topics ?? topics)
     .map((t) => {
-      const items = perQuestion.filter((a) => a.topicId === t.id);
+      const items = graded.filter((a) => a.topicId === t.id);
       return { ...t, correct: items.filter((a) => a.correct).length, total: items.length };
     })
     .filter((t) => t.total > 0);
@@ -750,6 +435,8 @@ export function scoreQuiz(quizDef = quiz, answers = submittedAnswers) {
     perQuestion,
     score,
     total,
+    ungraded: perQuestion.length - total,
+    questionCount: perQuestion.length,
     percent: total ? score / total : 0,
     passed: total ? score / total >= quizDef.passMark : false,
     byTopic,

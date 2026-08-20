@@ -1,9 +1,9 @@
 import { PAGE_IDS, PAGE_ICONS } from './pages';
 import { LoginScreen } from './LoginScreen';
-import { ProjectsScreen } from './ProjectsScreen';
 import { SubjectsScreen } from './SubjectsScreen';
 import { BrowseScreen } from './BrowseScreen';
 import { LessonScreen } from './LessonScreen';
+import { PracticeScreen } from './PracticeScreen';
 import { QuizScreen } from './QuizScreen';
 import { ResultsScreen } from './ResultsScreen';
 
@@ -13,10 +13,10 @@ import { ResultsScreen } from './ResultsScreen';
  */
 export const SCREENS = {
   login: LoginScreen,
-  projects: ProjectsScreen,
   subjects: SubjectsScreen,
   browse: BrowseScreen,
   lesson: LessonScreen,
+  practice: PracticeScreen,
   quiz: QuizScreen,
   results: ResultsScreen,
 };

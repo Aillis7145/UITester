@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useScreenState } from './screenState';
-import { categories, user } from '@/mock/data';
-import { rootsOf, progressOf } from '@/mock/nodes';
-import { useAppRoute } from './appRoute';
+import { user } from '@/mock/data';
+import { purchasedProjects } from '@/mock/projects';
+import { rootsOf, progressOf, getProject } from '@/mock/nodes';
 import { targetFor } from './nav';
 import { SubjectCard } from './parts/SubjectCard';
 import { ContinueRow } from './parts/ContinueRow';
@@ -23,24 +23,38 @@ const SORTERS = {
   rating: (a, b) => b.rating - a.rating,
 };
 
+/**
+ * หน้าคอร์ส — หน้าแรกหลังล็อกอิน และเป็นรากของทั้งเว็บ
+ *
+ * หนึ่งดีพลอย = หนึ่งลูกค้า ไม่มีหน้าเลือกวิชาคั่นอีกแล้ว
+ * คอร์สของทุกวิชาที่ลูกค้ารายนี้ซื้อมารวมอยู่ในกริดเดียว โดยมีแท็กบอกว่าใบไหนมาจากวิชาอะไร
+ */
 export function SubjectsScreen({ onNavigate }) {
   const { t, p } = useI18n();
   const { showSkeleton } = useScreenState();
 
-  const { project } = useAppRoute();
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('all');
+  const [subject, setSubject] = useState('all');
   const [sort, setSort] = useState('recent');
 
-  // ป้ายชั้นบนสุดของโครงการนี้ — "วิชา" ของโครงการหนึ่งคือ "ระดับ" ของอีกโครงการ
-  const levelPlural = p(project.levels[0].plural);
-  const courses = rootsOf(project.id);
+  /**
+   * รวมคอร์สของทุกวิชาที่ซื้อ
+   *
+   * flatMap สร้างอาร์เรย์ใหม่เสมอ จึง .sort() ต่อได้อย่างปลอดภัย
+   * ห้าม .sort() บนผลของ rootsOf() ตรงๆ เพราะนั่นคืออาร์เรย์ที่ KIDS แคชไว้
+   * เรียงทีเดียวก็สลับลำดับคอร์สของวิชานั้นถาวรตลอดอายุแท็บ
+   */
+  const courses = useMemo(() => purchasedProjects.flatMap((pr) => rootsOf(pr.id)), []);
 
-  // เหลือเฉพาะหมวดที่โครงการนี้มีจริง ไม่งั้นโครงการภาษาจะมีชิปคณิต/วิทย์ที่กดแล้วว่างเปล่า
-  const visibleCategories = useMemo(() => {
-    const used = new Set(courses.map((c) => c.categoryId));
-    return categories.filter((c) => c.id === 'all' || used.has(c.id));
-  }, [courses]);
+  // ซื้อวิชาเดียวก็ไม่ต้องมีชิป — ตัวกรองที่มีตัวเลือกเดียวคือสิ่งรบกวน ไม่ใช่ตัวช่วย
+  const showChips = purchasedProjects.length > 1;
+
+  /**
+   * ขอบเขตปัจจุบันเหลือวิชาเดียวไหม — ถ้าใช่ใช้คำเรียกชั้นของวิชานั้นเองได้
+   * ถ้าไม่ ต้องใช้คำกลาง เพราะ "ระดับทั้งหมด" ทับกริดที่มีทั้งชั้นปี ระดับ และคอร์สคือการโกหก
+   */
+  const scoped = subject !== 'all' ? getProject(subject) : purchasedProjects.length === 1 ? purchasedProjects[0] : undefined;
+  const levelPlural = scoped && p(scoped.levels[0].plural);
 
   const sortOptions = [
     { value: 'recent', label: t('subjects.sortRecent'), icon: 'clock' },
@@ -53,19 +67,19 @@ export function SubjectsScreen({ onNavigate }) {
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return courses
-      .filter((s) => category === 'all' || s.categoryId === category)
-      .filter((s) => {
+      .filter((c) => subject === 'all' || c.projectId === subject)
+      .filter((c) => {
         if (!q) return true;
-        return [s.title, s.subtitle, s.instructor]
+        return [c.title, c.subtitle, c.instructor, c.difficulty]
           .map((field) => `${field.th} ${field.en}`.toLowerCase())
           .some((text) => text.includes(q));
       })
       .sort(SORTERS[sort]);
-  }, [courses, query, category, sort]);
+  }, [courses, query, subject, sort]);
 
   const clearFilters = () => {
     setQuery('');
-    setCategory('all');
+    setSubject('all');
   };
 
   return (
@@ -106,21 +120,20 @@ export function SubjectsScreen({ onNavigate }) {
 
       {/* ---------- เรียนต่อ ---------- */}
       <div className="mt-8">
-        {/* ส่ง item ต่อไปจริงๆ แล้ว — เดิมทิ้งไปทั้งก้อนแล้วเปิดบทเรียนตัวเดียวกันเสมอ
-            รายการเรียนต่ออาจอยู่คนละโครงการ จึงต้องพา project ไปด้วย */}
-        <ContinueRow
-          projectId={project.id}
-          onOpen={(item) => onNavigate?.('lesson', { node: item.nodeId })}
-        />
+        <ContinueRow onOpen={(item) => onNavigate?.('lesson', { node: item.nodeId })} />
       </div>
 
       {/* ---------- ตัวกรอง + เรียงลำดับ ---------- */}
       <section className="mt-9">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0">
-            <h2 className="ui-heading text-lg">{t('browse.allOf', { level: levelPlural })}</h2>
+            <h2 className="ui-heading text-lg">
+              {scoped ? t('browse.allOf', { level: levelPlural }) : t('subjects.allCourses')}
+            </h2>
             <p className="mt-0.5 text-sm text-muted">
-              {t('browse.countOf', { n: visible.length, level: levelPlural })}
+              {scoped
+                ? t('browse.countOf', { n: visible.length, level: levelPlural })
+                : t('subjects.countAll', { n: visible.length })}
             </p>
           </div>
 
@@ -135,20 +148,25 @@ export function SubjectsScreen({ onNavigate }) {
 
         {/* overflow-x-auto ตัดแนวตั้งด้วยเสมอ ชิปที่ยกตัวตอน hover จึงโดนตัดขอบบน
             padding รอบด้าน (ชดเชยด้วย -mx/-mt) เปิดที่ให้ทั้งการยกตัวและเงา โดยไม่ทำให้ layout ขยับ */}
-        <div className="-mx-2 mt-1.5 flex gap-2 overflow-x-auto px-2 pb-5 pt-3">
-          {visibleCategories.map((cat) => (
-            <Chip
-              key={cat.id}
-              icon={cat.icon}
-              active={category === cat.id}
-              onClick={() => setCategory(cat.id)}
-            >
-              {p(cat.label)}
+        {showChips && (
+          <div className="-mx-2 mt-1.5 flex gap-2 overflow-x-auto px-2 pb-5 pt-3">
+            <Chip icon="grid" active={subject === 'all'} onClick={() => setSubject('all')}>
+              {t('subjects.allSubjects')}
             </Chip>
-          ))}
-        </div>
+            {purchasedProjects.map((pr) => (
+              <Chip
+                key={pr.id}
+                icon={pr.icon}
+                active={subject === pr.id}
+                onClick={() => setSubject(pr.id)}
+              >
+                {p(pr.short)}
+              </Chip>
+            ))}
+          </div>
+        )}
 
-        {/* ---------- กริดวิชา ---------- */}
+        {/* ---------- กริดคอร์ส ---------- */}
         {showSkeleton ? (
           <SubjectGridSkeleton />
         ) : visible.length === 0 ? (
@@ -159,7 +177,7 @@ export function SubjectsScreen({ onNavigate }) {
               <SubjectCard
                 key={course.id}
                 node={course}
-                onOpen={() => onNavigate?.(...targetFor(course, project))}
+                onOpen={() => onNavigate?.(...targetFor(course))}
               />
             ))}
           </div>

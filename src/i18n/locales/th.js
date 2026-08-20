@@ -1,5 +1,7 @@
 export default {
   common: {
+    // ใช้เป็นบรรทัดกำกับของ ProgressBar ทุกอันที่เปิด showLabel
+    progress: 'ความคืบหน้า',
     login: 'เข้าสู่ระบบ',
     logout: 'ออกจากระบบ',
     next: 'ถัดไป',
@@ -25,12 +27,12 @@ export default {
 
   pages: {
     login: 'เข้าสู่ระบบ',
-    projects: 'เลือกโครงการ',
     // ป้ายกลางๆ ที่ไม่ผูกกับชั้นไหน เพราะแต่ละโครงการเรียกชั้นนี้ไม่เหมือนกัน
     // ชื่อจริงของชั้น (วิชา/ระดับ) มาจากข้อมูลของโครงการ ไม่ใช่จากไฟล์นี้
     subjects: 'คอร์ส',
     browse: 'ไล่ดูเนื้อหา',
     lesson: 'บทเรียน',
+    practice: 'แบบฝึกหัด',
     quiz: 'แบบทดสอบ',
     results: 'ผลสอบ',
   },
@@ -58,16 +60,6 @@ export default {
     estMin: 'ราว {n} นาที',
     quizMeta: 'ทำได้ไม่จำกัดครั้ง',
     onlyMock: 'ตัวอย่างหน้าจอ ยังไม่ใช่ตัวเปิดไฟล์จริง',
-  },
-
-  project: {
-    title: 'เลือกโครงการที่ต้องการเรียน',
-    lead: 'แต่ละโครงการมีจำนวนชั้นเนื้อหาและชื่อเรียกไม่เหมือนกัน กดเข้าไปแล้วจะเห็นขั้นตอนต่างกัน',
-    ladder: 'โครงสร้างเนื้อหา {n} ชั้น',
-    courseCount: '{n} {level}',
-    contentCount: '{n} รายการ',
-    open: 'เข้าโครงการ',
-    switch: 'เปลี่ยนโครงการ',
   },
 
   home: {
@@ -123,6 +115,11 @@ export default {
   subjects: {
     greeting: 'สวัสดี, {name}',
     subGreeting: 'วันนี้อยากเรียนอะไรดี',
+    // เว็บนี้รวมคอร์สของทุกวิชาที่ลูกค้าซื้อไว้ในกริดเดียว
+    // จึงต้องมีคำกลางที่ไม่เอ่ยชั้นของวิชาไหนเป็นพิเศษ ใช้เมื่อกริดมีมากกว่าหนึ่งวิชา
+    allCourses: 'คอร์สทั้งหมด',
+    countAll: 'พบ {n} คอร์ส',
+    allSubjects: 'ทุกวิชา',
     // ไม่เอ่ยชื่อชั้น เพราะแต่ละโครงการเรียกไม่เหมือนกัน
     searchPh: 'ค้นหาชื่อหรือผู้สอน',
     streak: 'เรียน {n} วันติด',
@@ -148,6 +145,7 @@ export default {
     qa: 'ถาม-ตอบ',
     notes: 'บันทึกย่อ',
     takeQuiz: 'ทำแบบทดสอบ',
+    doPractice: 'ทำแบบฝึกหัด',
     locked: 'ยังไม่ปลดล็อก',
     watched: 'ดูแล้ว',
     playing: 'กำลังเล่น',
@@ -161,6 +159,11 @@ export default {
     pause: 'หยุดชั่วคราว',
     speed: 'ความเร็ว',
     captions: 'คำบรรยาย',
+    // เมนูภาษาคำบรรยายที่ปุ่ม CC — ชื่อภาษาเป็นเปลือก UI จึงอยู่ใน locale ไม่ใช่ p()
+    captionsOff: 'ไม่แสดง',
+    captionEn: 'ภาษาอังกฤษ',
+    captionZh: 'ภาษาจีน',
+    captionTh: 'ภาษาไทย',
     volume: 'ระดับเสียง',
     fullscreen: 'เต็มจอ',
     settings: 'ตั้งค่า',
@@ -171,7 +174,40 @@ export default {
     replies: '{n} ตอบกลับ',
   },
 
+  practice: {
+    title: 'เลือกชุดแบบฝึกหัด',
+    lead: 'แบบฝึกหัดของ {course} แยกตามทักษะที่วัด เลือกชุดที่อยากฝึกได้เลย',
+    // ชื่อทักษะเป็นคำสากลของวงการ ไม่ใช่คำที่แต่ละวิชาตั้งเอง จึงอยู่ใน locale ไม่ใช่ p()
+    grammar: 'Grammar Practice',
+    reading: 'Reading Practice',
+    listening: 'Listening Practice',
+    writing: 'Writing Practice',
+    speaking: 'Speaking Practice',
+    itemCount: '{n} ข้อ',
+    none: 'คอร์สนี้ยังไม่มีชุดแบบฝึกหัด',
+  },
+
   quiz: {
+    // ---- ข้อสอบชุดจริง: การฟัง / บทความ / ข้อเขียน / ข้อพูด ----
+    listen: 'กดเพื่อฟัง',
+    listenAgain: 'ฟังอีกครั้ง',
+    playing: 'กำลังเล่น',
+    stopAudio: 'หยุดเสียง',
+    audioHidden: 'ไม่แสดงบทพูด — ดูได้ในหน้าผลสอบ',
+    audioUnsupported: 'เบราว์เซอร์นี้อ่านออกเสียงไม่ได้',
+    showPassage: 'แสดงบทความ',
+    hidePassage: 'ซ่อนบทความ',
+    guidelines: 'แนวทางการตอบ',
+    starter: 'เริ่มด้วย',
+    typeHere: 'พิมพ์คำตอบของคุณที่นี่',
+    wordCount: '{n} คำ',
+    record: 'กดเพื่ออัดเสียง',
+    recording: 'กำลังอัด',
+    recorded: 'อัดแล้ว',
+    rerecord: 'อัดใหม่',
+    stopRecording: 'หยุดอัด',
+    recordMock: 'ตัวอย่างหน้าจอ ยังไม่ได้อัดเสียงจริง',
+    notAutoGraded: 'ตรวจโดยผู้สอน',
     qOf: 'ข้อ {n} จาก {total}',
     timeLeft: 'เวลาที่เหลือ',
     flag: 'ทำเครื่องหมายไว้',
@@ -181,6 +217,8 @@ export default {
     navigator: 'ผังข้อสอบ',
     stateAnswered: 'ตอบแล้ว',
     stateUnanswered: 'ยังไม่ตอบ',
+    // ชื่อของแถบความคืบหน้าในโมดัลยืนยันส่ง — มีไว้ให้ screen reader อ่าน ไม่ได้แสดงบนจอ
+    answered: 'ตอบแล้ว {n} จาก {total} ข้อ',
     stateFlagged: 'ทำเครื่องหมาย',
     stateCurrent: 'ข้อปัจจุบัน',
     confirmTitle: 'ยืนยันการส่งคำตอบ?',
@@ -190,6 +228,9 @@ export default {
   },
 
   result: {
+    ungradedNote: 'คะแนนคิดจากข้อปรนัยเท่านั้น · อีก {n} ข้อจาก {total} ข้อรอผู้สอนตรวจ',
+    sampleAnswer: 'ตัวอย่างคำตอบ',
+    transcript: 'บทพูดของเสียง',
     title: 'ผลการทดสอบ',
     passed: 'ผ่าน',
     failed: 'ไม่ผ่าน',

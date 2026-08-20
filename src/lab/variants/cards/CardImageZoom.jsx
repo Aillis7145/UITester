@@ -56,7 +56,7 @@ export default function CardImageZoom({ size = 'md', disabled }) {
       className={`v-zoom ui-focusable ${size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-lg' : ''}`}
     >
       <span className="v-zoom-frame block">
-        <img className="v-zoom-img" src="/mock/python.jpg" alt="" loading="lazy" decoding="async" />
+        <img className="v-zoom-img" src="/mock/lesson-2.jpg" alt="" loading="lazy" decoding="async" />
         <span className="v-zoom-tag inline-flex items-center gap-1 rounded-ui bg-primary px-2 py-1 text-xs font-bold text-on-primary">
           ดูตัวอย่างฟรี
         </span>

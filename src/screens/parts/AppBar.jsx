@@ -1,6 +1,5 @@
 import { useI18n } from '@/i18n/I18nProvider';
 import { APP_NAV_IDS, PAGE_ICONS } from '@/screens';
-import { ProjectMenu } from './ProjectMenu';
 import { NotificationMenu } from './NotificationMenu';
 import { ProfileMenu } from './ProfileMenu';
 import { Icon } from '@/components/Icon';
@@ -16,7 +15,7 @@ import { cn } from '@/lib/cn';
  */
 const NAV_IDS = APP_NAV_IDS;
 
-export function AppBar({ current, onNavigate, showNav = true }) {
+export function AppBar({ current, onNavigate }) {
   const { t } = useI18n();
 
   return (
@@ -27,7 +26,7 @@ export function AppBar({ current, onNavigate, showNav = true }) {
           {/* แบรนด์ */}
           <button
             type="button"
-            onClick={() => onNavigate?.(showNav ? 'subjects' : 'projects')}
+            onClick={() => onNavigate?.('subjects', { node: null })}
             className="ui-focusable flex shrink-0 items-center gap-2 rounded-ui pr-1"
           >
             <span className="grid h-8 w-8 place-items-center rounded-ui bg-primary text-on-primary">
@@ -36,15 +35,12 @@ export function AppBar({ current, onNavigate, showNav = true }) {
             <span className="ui-heading text-sm max-md:sr-only">{t('login.brand')}</span>
           </button>
 
-          {/* โครงการที่กำลังดูอยู่ + ทางสลับ — วางติดแบรนด์เพราะเป็นบริบทที่ครอบทุกอย่างด้านล่าง
-              ซ่อนในหน้าเลือกโครงการ เพราะที่นั่นทั้งหน้าคือตัวเลือกโครงการอยู่แล้ว */}
-          {showNav && <ProjectMenu onNavigate={onNavigate} />}
+          {/* ไม่มีตัวสลับวิชาแล้ว — หนึ่งดีพลอย = หนึ่งลูกค้า
+              คอร์สของทุกวิชาที่ซื้อรวมอยู่ในหน้าเดียวกันหมด จึงไม่มีอะไรให้สลับ
 
-          {/* เมนูหลัก — เลื่อนแนวนอนได้บนจอเล็กแทนที่จะยุบเป็นแฮมเบอร์เกอร์
-              เพราะมีแค่ 4 รายการ การซ่อนไว้ทำให้กดยากกว่าเดิม
-              ไม่มีเมนูก็ยังต้องมี div กินที่ไว้ ไม่งั้นเครื่องมือฝั่งขวาจะเลื่อนมาชิดแบรนด์ */}
-          {showNav ? (
-            <nav aria-label={t('nav.pages')} className="min-w-0 flex-1">
+              เมนูหลัก — เลื่อนแนวนอนได้บนจอเล็กแทนที่จะยุบเป็นแฮมเบอร์เกอร์
+              เพราะมีแค่ 4 รายการ การซ่อนไว้ทำให้กดยากกว่าเดิม */}
+          <nav aria-label={t('nav.pages')} className="min-w-0 flex-1">
               <ul className="flex gap-1 overflow-x-auto px-1 py-1.5">
                 {NAV_IDS.map((id) => {
                   const active = id === current;
@@ -70,10 +66,7 @@ export function AppBar({ current, onNavigate, showNav = true }) {
                   );
                 })}
               </ul>
-            </nav>
-          ) : (
-            <div className="flex-1" />
-          )}
+          </nav>
 
           {/* เครื่องมือฝั่งขวา — กระดิ่งกับโปรไฟล์กดเปิดเมนูได้จริง */}
           <div className="flex shrink-0 items-center gap-1.5">

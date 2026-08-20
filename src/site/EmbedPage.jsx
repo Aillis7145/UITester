@@ -29,7 +29,7 @@ export function EmbedPage() {
       <ScreenStateProvider value={DEFAULT_SCREEN_STATE}>
         {/* อ่าน ?project / ?node ต่อจากหน้าแม่ ทุกคอลัมน์ในโหมดเทียบจึงอยู่ตำแหน่งเดียวกัน
             แต่ onNavigate ยังเป็นตัวเปล่า — iframe ต้องกดแล้วไม่เลื่อนหนีกันเอง */}
-        <AppRouteProvider pageId={pageId} projectId={sp.get('project')} nodeId={sp.get('node')}>
+        <AppRouteProvider pageId={pageId} nodeId={sp.get('node')} setId={sp.get('set')}>
           <AppShell pageId={pageId} onNavigate={() => {}}>
             <Screen onNavigate={() => {}} />
           </AppShell>

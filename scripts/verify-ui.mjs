@@ -7,6 +7,7 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:5173';
 const OUT = '.screenshots';
@@ -69,14 +70,16 @@ for (const theme of THEMES) {
 // ---------- ภาพประกอบต้องโหลดได้จริงทุกรูป ----------
 await page.goto(`${BASE}/showcase/tech/subjects`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(1200);
+// ตรวจเฉพาะรูปที่อยู่ในระยะที่เบราว์เซอร์ควรโหลดแล้วจริงๆ
+// กริดรวมมี 38 ใบและทุกใบเป็น loading="lazy" รูปที่ยังอยู่ไกลนอกจอจึงยังไม่โหลด "โดยถูกต้อง"
+// ถ้าเทียบทุกรูปทั้งหน้า เช็คนี้จะแดงทั้งที่แอปทำงานถูก
 const imgs = await page.evaluate(() =>
-  [...document.querySelectorAll('[data-theme] img')].map((i) => ({
-    src: i.getAttribute('src'),
-    ok: i.complete && i.naturalWidth > 0,
-  })),
+  [...document.querySelectorAll('[data-theme] img')]
+    .filter((i) => i.getBoundingClientRect().top < window.innerHeight * 1.5)
+    .map((i) => ({ src: i.getAttribute('src'), ok: i.complete && i.naturalWidth > 0 })),
 );
 check(
-  `course covers load (${imgs.filter((i) => i.ok).length}/${imgs.length})`,
+  `course covers load (${imgs.filter((i) => i.ok).length}/${imgs.length} in range)`,
   imgs.length >= 8 && imgs.every((i) => i.ok),
 );
 
@@ -205,55 +208,590 @@ for (const theme of THEMES) {
   check(`${theme}: outside click closes profile menu`, await hidden(prof));
 }
 
-// ---------- จำนวนหน้าไล่ระดับต้องมาจากข้อมูล ไม่ใช่ค่าตายตัว ----------
-// นี่คือข้อพิสูจน์ของโจทย์หลักทั้งหมด: ค่าคาดหวังอ่านจาก projects.js ซึ่งเป็นไฟล์เดียวกับที่แอปอ่าน
-// ถ้าใครไป hardcode ลำดับหน้าไว้ในหน้าจอ โครงการที่ลึกไม่เท่ากันจะสะดุดทันที
-const { projects } = await import('../src/mock/projects.js');
+// ---------- โครงสร้างข้อมูลต้องตรงกับหลักสูตรจริง ----------
+// ตรวจในระดับข้อมูลก่อนเปิดเบราว์เซอร์ — ถูกและเร็ว และชี้ต้นเหตุได้ตรงกว่าการไล่คลิก
+const { projects, purchasedProjects, LEVEL_ORDER } = await import('../src/mock/projects.js');
+const { curriculum } = await import('../src/mock/curriculum.js');
+const nodesApi = await import('../src/mock/nodes.js');
+const { rootsOf, childrenOf, contentCountOf, getNode, unitLevelOf, continueLearning, resumeContentOf } = nodesApi;
 
-// ถ้าทุกโครงการลึกเท่ากัน การทดสอบข้างล่างพิสูจน์อะไรไม่ได้เลย จึงต้องกันไว้ก่อน
+// ทุกวิชาต้องมีชั้นหน่วยจริง ไม่งั้น flow 2 คลิกเป็นไปไม่ได้
 check(
-  'demo projects really differ in depth',
-  new Set(projects.map((pr) => pr.levels.length)).size > 1,
+  'every subject declares at least course + unit',
+  projects.every((pr) => pr.levels.length >= 2 && pr.levels[0].level === LEVEL_ORDER[0]),
+);
+check('every subject has a short tag label', projects.every((pr) => pr.short?.th && pr.short?.en));
+
+// ถ้า fixture ไม่แยกแยะ การทดสอบข้างล่างพิสูจน์อะไรไม่ได้เลย จึงต้องกันไว้ก่อน
+//
+// *** ห้ามเปลี่ยนเป็น "คำเรียกหน่วยต้องไม่ซ้ำกันทุกวิชา" ***
+// ห้าวิชาประถมใช้คำว่า "ภาคเรียน" เหมือนกันโดยตั้งใจ เพราะหลักสูตรจริงเป็นแบบนั้น
+// เช็คแบบนั้นจะแดงทันทีทั้งที่ข้อมูลถูก
+const unitLabels = new Set(projects.map((pr) => pr.levels[1].label.en));
+check(`subjects use at least 3 different unit words (${[...unitLabels].join(', ')})`, unitLabels.size >= 3);
+check(
+  'fixture has both a subject with a sub-unit level and one without',
+  projects.some((pr) => pr.levels.length > 2) && projects.some((pr) => pr.levels.length === 2),
 );
 
-for (const project of projects) {
-  await page.goto(`${BASE}/showcase/tech/projects?lang=en`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(400);
-  await page
-    .locator('[data-theme] article[role="button"]', { hasText: project.name.en })
-    .first()
-    .click();
-  await page.waitForTimeout(500);
-  check(`${project.id}: opens its top-level list`, pathOf() === '/showcase/tech/subjects');
+// จำนวนโหนดต้องตรงกับที่ curriculum.js ประกาศ — จับกรณีสร้างโหนดตกหล่นหรือซ้ำ
+const expected = curriculum.reduce(
+  (acc, c) => {
+    acc.courses++;
+    for (const u of c.units) {
+      acc.units++;
+      if (u.topics) for (const t of u.topics) (acc.topics++, (acc.items += t.items.length));
+      else acc.items += u.items.length;
+    }
+    return acc;
+  },
+  { courses: 0, units: 0, topics: 0, items: 0 },
+);
+const built = projects.flatMap((pr) => rootsOf(pr.id));
+check(
+  `${built.length} course nodes = ${expected.courses} in curriculum.js`,
+  built.length === expected.courses,
+);
+check(
+  `${built.reduce((a, c) => a + contentCountOf(c.id), 0)} content nodes = ${expected.items} in curriculum.js`,
+  built.reduce((a, c) => a + contentCountOf(c.id), 0) === expected.items,
+);
+check(
+  'every course has at least one unit and one openable item',
+  built.every((c) => childrenOf(c.id).length > 0 && contentCountOf(c.id) > 0),
+);
+check(
+  'continue-learning rows all point at a course that exists',
+  continueLearning.length > 0 && continueLearning.every((r) => getNode(r.courseId)),
+);
 
-  let steps = 0;
-  for (let guard = 0; guard < 10 && !pathOf().endsWith('/lesson'); guard++) {
-    // การ์ดกล่องเป็น article[role="button"] ส่วนแถวสื่ออยู่ในลิสต์ใต้ section
-    // ต้องเจาะจง section เพราะเมนูสลับโครงการบน AppBar ก็เป็น ul li button เหมือนกัน
-    const card = page.locator('[data-theme] article[role="button"]').first();
-    const row = page.locator('[data-theme] section ul li button:not([disabled])').first();
-    await ((await card.count()) ? card : row).click();
-    await page.waitForTimeout(500);
-    if (pathOf().endsWith('/browse')) steps++;
+// ---------- ชื่อสื่อต้องไม่ใช่เลขลอยๆ ----------
+// ตัวตัดข้อย่อยของแผ่นอังกฤษเคยตัดกลางเลขสามชั้น: "3.6.1 Beautiful English"
+// กลายเป็น "3." กับ "6.1 Beautiful English" คนละชิ้น แล้วเพลย์ลิสต์มีแถวชื่อ "3." คั่นอยู่
+// เช็คที่ข้อมูลเพราะเห็นได้ทุกใบ ไม่ต้องรอให้ไปโผล่ในหน้าที่บังเอิญเปิดดู
+const allTitles = [];
+for (const c of curriculum) {
+  for (const u of c.units) {
+    for (const t of u.topics ?? []) allTitles.push(...t.items, t.name);
+    allTitles.push(...(u.items ?? []));
   }
-  // levels.length - 1 เพราะกล่องชั้นล่างสุดตัดตรงไปหน้าสื่อ ซึ่งมีลิสต์สื่ออยู่ข้างแล้ว
-  // ยังเป็นค่าที่มาจากข้อมูลล้วน ไม่มีเลขไหนเขียนไว้ในหน้าจอ
-  const expected = project.levels.length - 1;
+}
+const stubs = allTitles.filter((t) => /^\d+(\.\d+)*\.?\s*$/.test(t));
+check(
+  `no content title is a bare number (${stubs.length} found${stubs.length ? ': ' + [...new Set(stubs)].slice(0, 5).join(', ') : ''})`,
+  stubs.length === 0,
+);
+
+// ---------- ชุดแบบฝึกหัดต้องไม่ปนอยู่ในเพลย์ลิสต์ ----------
+// ข้อ 4.x คือแบบฝึกหัดระหว่างบท ข้อ 5.x คือแบบฝึกหัดท้ายบท ทั้งคู่เป็นข้อสอบ ไม่ใช่สื่อให้ดู
+// ย้ายไปอยู่หลังปุ่ม "ทำแบบฝึกหัด" แล้ว จึงต้องไม่เหลือในต้นไม้เนื้อหาอีก
+const practiceSheets = curriculum.filter((c) => c.practice?.length);
+const leaked = practiceSheets.flatMap((c) =>
+  c.units.flatMap((u) => (u.topics ?? []).filter((t) => /^\s*[45]\./.test(t.name)).map((t) => t.name)),
+);
+check(
+  `practice sections stay out of the playlist (${leaked.length} leaked)`,
+  practiceSheets.length > 0 && leaked.length === 0,
+);
+check(
+  `courses that declare practice list all five skills (${practiceSheets.length} courses)`,
+  practiceSheets.every((c) =>
+    ['grammar', 'reading', 'listening', 'writing', 'speaking'].every((k) => c.practice.includes(k)),
+  ),
+);
+// ต้องมีทั้งคอร์สที่มีและไม่มีแบบฝึกหัด ไม่งั้นเช็คปุ่มข้างล่างพิสูจน์อะไรไม่ได้
+check(
+  'fixture has courses both with and without practice sets',
+  built.some((c) => c.practice?.length) && built.some((c) => !c.practice?.length),
+);
+
+// ---------- คอร์สที่ประกาศว่าเป็นวิดีโอล้วน ต้องเป็นวิดีโอล้วนจริง ----------
+// ชื่อหัวข้อของ B1/B2 อ่านเหมือนเอกสารเยอะมาก ("คำศัพท์ (Vocabulary Focus)", "บทนำ")
+// ถ้าตัวเดาชนิดสื่อกลับมาทำงานกับคอร์สกลุ่มนี้เมื่อไร เพลย์ลิสต์จะสลับไอคอนทั้งหน้าอีก
+const { VIDEO_ONLY_SHEETS } = await import('../src/mock/projects.js');
+
+const leavesUnder = (id) => {
+  const out = [];
+  const walk = (nid) => {
+    const kids = childrenOf(nid);
+    if (!kids.length) {
+      const n = getNode(nid);
+      if (n?.level === 'content') out.push(n);
+      return;
+    }
+    kids.forEach((k) => walk(k.id));
+  };
+  walk(id);
+  return out;
+};
+const coursesBySheet = (sheets) =>
+  projects.flatMap((pr) => rootsOf(pr.id)).filter((c) => sheets.includes(c.sheet));
+
+const videoOnlyCourses = coursesBySheet(VIDEO_ONLY_SHEETS);
+check(
+  `every declared video-only sheet has a course (${VIDEO_ONLY_SHEETS.join(', ')})`,
+  videoOnlyCourses.length === VIDEO_ONLY_SHEETS.length,
+);
+const videoOnlyLeaves = videoOnlyCourses.flatMap((c) => leavesUnder(c.id));
+check(
+  `video-only courses carry no other media kind (${videoOnlyLeaves.length} items)`,
+  videoOnlyLeaves.length > 500 && videoOnlyLeaves.every((n) => n.kind === 'video'),
+);
+// ตัวเดาชนิดสื่อต้องยังทำงานกับคอร์สที่เหลือ ไม่งั้นเช็คข้างบนผ่านเพราะทั้งระบบเป็นวิดีโอหมด
+const otherLeaves = projects
+  .flatMap((pr) => rootsOf(pr.id))
+  .filter((c) => !VIDEO_ONLY_SHEETS.includes(c.sheet))
+  .flatMap((c) => leavesUnder(c.id));
+check(
+  `other courses still mix media kinds (${[...new Set(otherLeaves.map((n) => n.kind))].sort().join(', ')})`,
+  new Set(otherLeaves.map((n) => n.kind)).size >= 3,
+);
+
+// ---------- เอกสารต้องไม่หายไป แค่ย้ายไปอยู่รายการดาวน์โหลดของหน่วย ----------
+const videoOnlyUnits = videoOnlyCourses.flatMap((c) => childrenOf(c.id));
+check(
+  `every unit of a video-only course offers files to download (${videoOnlyUnits.length} units)`,
+  videoOnlyUnits.length > 0 && videoOnlyUnits.every((u) => u.resources?.length > 0),
+);
+check(
+  'unit files are named in both languages and have a size',
+  videoOnlyUnits.every((u) => u.resources.every((r) => r.name?.th && r.name?.en && r.sizeKb > 0 && r.type)),
+);
+// ไฟล์ต้องสะท้อนเนื้อหาของหน่วยนั้น ไม่ใช่ลิสต์ตายตัวที่ก๊อปแปะเท่ากันทุกหน่วย
+check(
+  'a unit only lists a vocabulary file when it actually teaches vocabulary',
+  videoOnlyUnits.every((u) => {
+    const hay = childrenOf(u.id)
+      .flatMap((g) => [g.title.th, ...childrenOf(g.id).map((n) => n.title.th)])
+      .join('\n');
+    const listed = u.resources.some((r) => r.name.en === 'Unit vocabulary list');
+    return listed === /คำศัพท์|Vocabulary|Word Wise/i.test(hay);
+  }),
+);
+// ไอดีซ้ำจะทำให้ React ใช้ key ชนกันแล้วรายการกะพริบผิดใบตอนสลับหน่วย
+check(
+  'file ids are unique across the whole site',
+  new Set(videoOnlyUnits.flatMap((u) => u.resources.map((r) => r.id))).size ===
+    videoOnlyUnits.reduce((n, u) => n + u.resources.length, 0),
+);
+// คอร์สที่ไม่ได้ประกาศไว้ต้องไม่มี resources ติดมา ไม่งั้นแปลว่าเงื่อนไขรั่ว
+check(
+  'units of other courses carry no unit files',
+  projects
+    .flatMap((pr) => rootsOf(pr.id))
+    .filter((c) => !VIDEO_ONLY_SHEETS.includes(c.sheet))
+    .flatMap((c) => childrenOf(c.id))
+    .every((u) => !u.resources),
+);
+
+// ---------- ชุดข้อสอบจริงของ B1 บทที่ 1 ----------
+// แปลงมาจากไฟล์ Word 10 ไฟล์ ตัวเลขจึงต้องตรงกับที่ไฟล์ประกาศไว้เอง ไม่ใช่ตรงกับที่เราจำได้
+const { quizBank } = await import('../src/mock/quizbank.js');
+const { quizFor, practiceSetsOf } = await import('../src/mock/quizzes.js');
+const { quiz: demoQuiz } = await import('../src/mock/data.js');
+
+const bank = quizBank['ENG_B1#1'];
+check('B1 unit 1 has a real quiz bank', Boolean(bank));
+
+const EXPECT = { grammar: 6, reading: 5, listening: 5, writing: 2, speaking: 2 };
+check(
+  `practice sets: ${Object.entries(EXPECT).map(([k, n]) => `${k} ${bank.practice[k]?.questions.length}/${n}`).join(' · ')}`,
+  Object.entries(EXPECT).every(([k, n]) => bank.practice[k]?.questions.length === n),
+);
+check(`unit quiz has 20 items (${bank.unitQuiz.questions.length})`, bank.unitQuiz.questions.length === 20);
+check(
+  `unit quiz covers all five skills (${[...new Set(bank.unitQuiz.questions.map((q) => q.skill))].join(', ')})`,
+  new Set(bank.unitQuiz.questions.map((q) => q.skill)).size === 5,
+);
+
+const allQuestions = [...Object.values(bank.practice).flatMap((s2) => s2.questions), ...bank.unitQuiz.questions];
+check(
+  'every multiple-choice item has exactly one answer that exists in its choices',
+  allQuestions
+    .filter((q) => q.type === 'single')
+    .every((q) => q.answerIds?.length === 1 && q.choices.some((c) => c.id === q.answerIds[0]) && q.choices.length === 4),
+);
+check(
+  'every written/spoken item carries its guidelines and sample answer',
+  allQuestions
+    .filter((q) => q.type === 'typing' || q.type === 'speaking')
+    .every((q) => q.guidelines?.length > 0 && q.sample?.th),
+);
+check(
+  'every listening item carries the audio script',
+  allQuestions.filter((q) => q.skill === 'listening').every((q) => typeof q.audioScript === 'string' && q.audioScript.length > 200),
+);
+check(
+  'every reading item carries its passage',
+  allQuestions.filter((q) => q.skill === 'reading' && q.type === 'single').every((q) => q.passage?.th?.length > 200),
+);
+// บทความต้องเป็นบทความ ไม่ใช่ทั้งไฟล์ — ตัวหาขอบเขตเคยกวาดเฉลยมาด้วยทั้งก้อน
+check(
+  'passages stop before the answer key',
+  allQuestions.filter((q) => q.passage).every((q) => !/คำตอบคือ|Answers:/.test(q.passage.th)),
+);
+
+// ---------- ชุดจริงต้องไม่รั่วออกนอก B1 บทที่ 1 ----------
+const b1First = resumeContentOf(childrenOf(rootsOf('eng')[2].id)[0].id);
+const otherFirst = resumeContentOf(childrenOf(rootsOf('mat-p')[0].id)[0].id);
+check('unit quiz resolves from ?set=unit', quizFor(b1First, 'unit') === bank.unitQuiz);
+check('practice set resolves from ?set=practice-grammar', quizFor(b1First, 'practice-grammar') === bank.practice.grammar);
+check('courses without a bank still get the demo quiz', quizFor(otherFirst, 'unit') === demoQuiz);
+check('practice sets are only offered where a bank exists', Boolean(practiceSetsOf(b1First)) && !practiceSetsOf(otherFirst));
+
+// ---------- ปกต้องไม่ซ้ำ "แม้แต่คู่เดียว" ในทั้งระบบ ----------
+// รูปคือสิ่งแรกที่ตากวาดเจอบนการ์ด ก่อนชื่อและก่อนแท็ก
+// ป.1 กับ ป.3 ที่ใช้รูปเดียวกันจะถูกอ่านว่าเป็นคอร์สเดียวกัน
+// เทียบที่โหนดคอร์สจริง ไม่ใช่ที่ตารางประกาศ เพราะสิ่งที่ผู้เรียนเห็นคือโหนด
+const covers = built.map((c) => c.cover);
+const dupCovers = covers.filter((c, i) => covers.indexOf(c) !== i);
+check(
+  `every course has its own cover (${new Set(covers).size}/${covers.length})${dupCovers.length ? ' — ซ้ำ: ' + [...new Set(dupCovers)].join(', ') : ''}`,
+  new Set(covers).size === covers.length,
+);
+check(
+  'every cover file exists on disk',
+  covers.every((c) => fs.existsSync('public' + c)),
+);
+// เทียบเนื้อไฟล์ด้วย เพราะคนละชื่อไฟล์ที่เป็นรูปเดียวกันเป๊ะก็ยังอ่านว่าเป็นคอร์สเดียวกันอยู่ดี
+const bySum = new Map();
+const sameImage = [];
+for (const c of covers) {
+  const sum = createHash('md5').update(fs.readFileSync('public' + c)).digest('hex');
+  if (bySum.has(sum)) sameImage.push(`${c} = ${bySum.get(sum)}`);
+  else bySum.set(sum, c);
+}
+check(
+  `no two covers are the same image${sameImage.length ? ' — ' + sameImage.join(', ') : ''}`,
+  sameImage.length === 0,
+);
+
+// ---------- ทุกวิชาถึงวิดีโอใน 2 คลิกเท่ากันหมด ----------
+// นี่คือข้อพิสูจน์ของโจทย์หลัก: ค่าคาดหวังอ่านจาก projects.js ซึ่งเป็นไฟล์เดียวกับที่แอปอ่าน
+// วิชาที่ประกาศ 2 ชั้นกับ 3 ชั้นต้องได้จำนวนคลิกเท่ากัน เพราะชั้นที่ 3 ไม่มีหน้าของตัวเอง
+const chipRow = () => page.locator('[data-theme] div.overflow-x-auto').first();
+const cards = () => page.locator('[data-theme] article[role="button"]');
+
+for (const project of purchasedProjects) {
+  await page.goto(`${BASE}/showcase/tech/subjects?lang=en`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(400);
+
+  const chip = chipRow().locator('button', { hasText: new RegExp(`^${project.short.en}$`) });
+  await chip.first().click();
+  await page.waitForTimeout(400);
+
+  const shown = await cards().count();
+  check(`${project.id}: chip shows ${rootsOf(project.id).length} courses`, shown === rootsOf(project.id).length);
+
+  // ทุกใบต้องติดแท็กวิชา ไม่งั้นกริดรวมอ่านไม่ออกว่าใบไหนมาจากสินค้าตัวไหน
+  const tagged = await cards().locator(`text="${project.short.en}"`).count();
+  check(`${project.id}: every card carries its subject tag (${tagged}/${shown})`, tagged === shown);
+
+  // คลิกที่ 1 — คอร์ส → หน้าไล่ระดับ
+  await cards().first().click();
+  await page.waitForTimeout(500);
+  check(`${project.id}: click 1 opens /browse`, pathOf() === '/showcase/tech/browse');
+
+  // หน้านั้นต้องใช้ "คำเรียกหน่วยของวิชานี้เอง" ไม่ใช่คำกลางที่ใช้ร่วมกันทุกวิชา
+  const unitWord = project.levels[1].plural.en.toUpperCase();
+  const browseText = (await page.locator('[data-theme]').first().innerText()).toUpperCase();
+  check(`${project.id}: browse names its own unit level (${unitWord})`, browseText.includes(unitWord));
+
+  // การ์ดหน่วยต้องมีรูปปกเหมือนการ์ดคอร์ส ไม่ใช่กล่องเปล่า
+  const unitCovers = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-theme] article[role="button"] img')]
+      .filter((i) => i.getBoundingClientRect().top < window.innerHeight * 1.5)
+      .map((i) => i.complete && i.naturalWidth > 0),
+  );
   check(
-    `${project.id}: ${steps} drill-down pages = levels.length - 1 (${expected})`,
-    steps === expected && pathOf().endsWith('/lesson'),
+    `${project.id}: unit cards show a loaded cover (${unitCovers.filter(Boolean).length}/${unitCovers.length})`,
+    unitCovers.length > 0 && unitCovers.every(Boolean),
   );
 
-  // ป้ายชั้นต้องเป็นคำของโครงการนี้จริง ไม่ใช่คำกลางที่ใช้ร่วมกันทุกโครงการ
-  // ถอยกลับหนึ่งครั้งจะได้กล่องชั้นล่างสุด ซึ่งโชว์ชื่อชั้นของตัวเองเป็นหัวเรื่องย่อย
-  await page.goBack();
-  await page.waitForTimeout(500);
-  // เทียบแบบไม่สนตัวพิมพ์ เพราะหัวเรื่องย่อยตั้ง text-transform: uppercase ไว้
-  // และ innerText คืนข้อความ "ที่เรนเดอร์จริง" จึงได้ TOPIC ไม่ใช่ Topic
-  const deepest = project.levels.at(-1).label.en.toUpperCase();
-  const text = (await page.locator('[data-theme]').first().innerText()).toUpperCase();
-  check(`${project.id}: shows its own level label (${deepest})`, text.includes(deepest));
+  // คลิกที่ 2 — หน่วย → หน้าวิดีโอทันที ไม่ว่าวิชานี้จะประกาศไว้กี่ชั้น
+  await cards().first().click();
+  await page.waitForTimeout(600);
+  check(`${project.id}: click 2 lands on /lesson`, pathOf() === '/showcase/tech/lesson');
+
+  // เพลย์ลิสต์ต้องเป็นของ "หน่วยที่เลือก" เท่านั้น
+  // เดิมใช้พี่น้องของกล่องแม่ ซึ่งลากหัวข้อของทุกหน่วยพี่น้องเข้ามาด้วยทั้งชุด
+  const node = getNode(new URL(page.url()).searchParams.get('node'));
+  const unitLevel = unitLevelOf(project);
+  let unit = node;
+  while (unit && unit.level !== unitLevel) unit = getNode(unit.parentId);
+  let inUnit = 0;
+  const walk = (id) => childrenOf(id).forEach((k) => (k.level === 'content' ? inUnit++ : walk(k.id)));
+  if (unit) walk(unit.id);
+  // นับ "แถวสื่อ" ตรงๆ ไม่ไล่เทียบข้อความ เพราะแผงมีหัวกลุ่ม ชื่อหน่วย และปุ่มท้ายแผงปนอยู่ด้วย
+  const listed = await page.locator('[data-theme] aside ul li').count();
+  check(
+    `${project.id}: playlist lists exactly the unit's ${inUnit} items (${listed})`,
+    Boolean(unit) && inUnit > 0 && listed === inUnit,
+  );
 }
+
+// ---------- กริดรวมต้องรวมจริง ----------
+await page.goto(`${BASE}/showcase/tech/subjects?lang=en`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(500);
+const allCards = await cards().count();
+check(`merged grid shows every purchased course (${allCards}/${built.length})`, allCards === built.length);
+
+const cardTags = await page.evaluate(() =>
+  [...document.querySelectorAll('[data-theme] article[role="button"]')].map((a) => a.innerText),
+);
+const shortNames = purchasedProjects.map((pr) => pr.short.en);
+check(
+  'every card in the merged grid carries a subject tag',
+  cardTags.every((txt) => shortNames.some((n) => txt.includes(n))),
+);
+check(
+  `all ${purchasedProjects.length} subjects appear in the grid`,
+  shortNames.every((n) => cardTags.some((txt) => txt.includes(n))),
+);
+// จับปัญหา updatedAt กระจุก — ถ้าวิชาเดียวยึดสองแถวแรก กริดจะดูเหมือนไม่ได้รวมอะไรเลย
+const firstEight = cardTags.slice(0, 8);
+const subjectsUpTop = new Set(shortNames.filter((n) => firstEight.some((txt) => txt.includes(n))));
+check(
+  `first 8 cards mix subjects (${[...subjectsUpTop].join(', ')})`,
+  subjectsUpTop.size >= 2,
+);
+
+// ---------- หน้าเลือกโครงการต้องหายไปจริง ไม่ใช่แค่ซ่อนลิงก์ ----------
+await page.goto(`${BASE}/showcase/tech/projects`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(400);
+check('/projects no longer resolves', pathOf() !== '/showcase/tech/projects');
+
+// AppBar ต้องไม่เหลือปุ่มสลับวิชา — เหลือไว้จะพาย้อนกลับไปโมเดลหลายโครงการเงียบๆ
+await page.goto(`${BASE}/showcase/tech/subjects?lang=en`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(400);
+const barText = await page.locator('[data-theme] header').first().innerText();
+check(
+  'app bar has no subject switcher',
+  !projects.some((pr) => barText.includes(pr.name.en)),
+);
+
+// ---------- ?node ที่ลึกกว่าคอร์สบนหน้า browse ต้องถูกดันขึ้นมาที่คอร์ส ----------
+// ลิงก์ที่แชร์ไว้ก่อนยุบ flow ชี้ไปที่หน่วยหรือชั้นใต้หน่วย ซึ่งไม่มีหน้าของตัวเองแล้ว
+const deepCourse = rootsOf('mat-p')[0];
+const deepUnit = childrenOf(deepCourse.id)[0];
+await page.goto(`${BASE}/showcase/tech/browse?node=${deepUnit.id}&lang=en`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(400);
+const pushedUp = await page.locator('[data-theme] h1').first().innerText();
+check(
+  `deep ?node on /browse is pushed up to its course (${pushedUp})`,
+  pathOf() === '/showcase/tech/browse' && pushedUp.includes(deepCourse.title.en),
+);
+
+// ---------- ทุกแถบความคืบหน้าต้องอ่านออกทั้งด้วยตาและด้วย screen reader ----------
+for (const pageId of ['subjects', 'browse', 'lesson']) {
+  await page.goto(`${BASE}/showcase/tech/${pageId}`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(500);
+  const bars = await page.evaluate(() => {
+    const named = (el) => {
+      if (el.getAttribute('aria-label')) return true;
+      const id = el.getAttribute('aria-labelledby');
+      return Boolean(id && document.getElementById(id)?.innerText.trim());
+    };
+    return [...document.querySelectorAll('[data-theme] [role="progressbar"]')].map((el) => ({
+      named: named(el),
+      // ข้อความที่ "ตาเห็น" คือของในกล่องแม่ ตัวแถบเองไม่มีตัวหนังสือ
+      text: (el.parentElement?.innerText ?? '').trim(),
+    }));
+  });
+  check(`${pageId}: has progress bars (${bars.length})`, bars.length > 0);
+  check(`${pageId}: every progress bar has an accessible name`, bars.every((b) => b.named));
+  check(
+    `${pageId}: every progress bar shows "ความคืบหน้า" and a % figure`,
+    bars.every((b) => b.text.includes('ความคืบหน้า') && /\d+%/.test(b.text)),
+  );
+}
+
+// ---------- หน้าวิดีโอของ B1 ต้องไม่มีเอกสารแทรกในเพลย์ลิสต์ ----------
+await page.goto(`${BASE}/showcase/tech/lesson?node=${b1First.id}`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+// เพลย์ลิสต์ปิด showKind ไว้ ป้ายชนิดจึงไม่โผล่เป็นตัวหนังสือให้ตรวจตรงๆ
+// แต่ "หน่วยวัด" ท้ายแถวฟ้องแทน: คลิปบอกความยาว mm:ss ส่วนเอกสารบอกจำนวนหน้า
+const b1Rows = await page.locator('[data-theme] aside ul li').allInnerTexts();
+check(
+  `B1 playlist shows ${b1Rows.length} items, every one of them timed like a clip`,
+  b1Rows.length === 14 && b1Rows.every((row) => /\d+:\d\d/.test(row)),
+);
+check(
+  'no row in the B1 playlist is measured in pages or attempts',
+  !b1Rows.some((row) => /\d+ หน้า|ราว \d+ นาที|ทำได้ไม่จำกัดครั้ง/.test(row)),
+);
+
+// หัวข้อที่ชื่ออ่านเหมือนเอกสารต้องกดแล้วได้ "เครื่องเล่นวิดีโอ" ไม่ใช่การ์ดเอกสารที่กดโหลดไม่ได้
+await page.goto(`${BASE}/showcase/tech/lesson?node=eng-c3-u1-t2-v2`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+const vocabPage = await page.locator('[data-theme]').first().innerText();
+check(
+  'a topic titled "คำศัพท์" still opens as a video',
+  vocabPage.includes('คำศัพท์ (Vocabulary Focus)') && !vocabPage.includes('ยังไม่ใช่ตัวเปิดไฟล์จริง'),
+);
+
+// เอกสารยังต้องหาเจอ — ไม่ได้แค่ถูกลบทิ้ง
+const docsTab = page.getByRole('tab', { name: /เอกสาร/ });
+check('the document tab says how many files the unit has', /เอกสาร · 5/.test(await docsTab.innerText()));
+await docsTab.click();
+await page.waitForTimeout(400);
+const docPanel = await page.locator('[role="tabpanel"]').first().innerText();
+check(
+  'unit documents are downloadable below the video',
+  ['เอกสารประกอบบทเรียน', 'คำศัพท์ประจำบท', 'สคริปต์บทสนทนา'].every((n) => docPanel.includes(n)),
+);
+// ไฟล์กลางของบทเรียนตัวอย่างเป็นของคอร์ส AI — โผล่ในคอร์สภาษาอังกฤษเมื่อไรแปลว่าส่ง prop ไม่ถึง
+check('the generic sample files do not leak into an English course', !/ipynb|\.csv/.test(docPanel));
+
+// ---------- ชุดข้อสอบจริงต้องทำได้จริงในเบราว์เซอร์ ----------
+const quizUrl = (set) => `${BASE}/showcase/tech/quiz?node=${b1First.id}&set=${set}`;
+
+await page.goto(quizUrl('practice-grammar'), { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+check(
+  `grammar practice opens its own set (${await page.locator('[data-theme] h1').first().innerText()})`,
+  (await page.locator('[data-theme] h1').first().innerText()).includes('ไวยากรณ์'),
+);
+check(
+  `grammar practice shows 6 items in the navigator`,
+  (await page.locator('[data-theme] nav ol li').count()) === 6,
+);
+
+// ข้อการฟังต้องมีปุ่มฟัง และ *ห้าม* มีบทพูดเป็นตัวหนังสือ ไม่งั้นกลายเป็นข้อสอบการอ่าน
+await page.goto(quizUrl('practice-listening'), { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+const listenBtn = page.locator('[data-theme] button[aria-label="กดเพื่อฟัง"]');
+check('listening item offers a play button', (await listenBtn.count()) === 1);
+const listeningText = await page.locator('[data-theme]').first().innerText();
+check(
+  'listening item never prints the transcript',
+  !listeningText.includes('Welcome to "New Faces on Campus"'),
+);
+
+// ข้อการอ่านต้องมีบทความ และไฮไลต์ช่องว่างของข้อนั้น
+await page.goto(quizUrl('practice-reading'), { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+const readingText = await page.locator('[data-theme]').first().innerText();
+check(
+  'reading item shows its passage',
+  readingText.includes('A New Start in a New City') && readingText.includes('Carlos'),
+);
+check('reading item never prints the answer key', !readingText.includes('คำตอบคือ'));
+
+// ข้อการเขียนต้องพิมพ์ได้จริง และผังข้อสอบต้องเปลี่ยนเป็น "ตอบแล้ว"
+await page.goto(quizUrl('practice-writing'), { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+const box = page.locator('[data-theme] textarea');
+check('writing item offers a text box', (await box.count()) === 1);
+await box.fill('On weekdays I usually read the news before work.');
+await page.waitForTimeout(300);
+check(
+  'typing marks the item answered in the navigator',
+  await page.locator('[data-theme] nav ol li button').first().getAttribute('aria-label').then((l) => l.includes('ตอบแล้ว')),
+);
+// ตัวอย่างคำตอบเป็นเฉลย ห้ามโผล่ตอนกำลังทำข้อสอบ
+check(
+  'the sample answer stays hidden while answering',
+  !(await page.locator('[data-theme]').first().innerText()).includes('check my emails first thing'),
+);
+
+// ---------- ข้อสอบท้ายบท: 20 ข้อ ส่งได้ และคะแนนแยกข้อที่รอตรวจ ----------
+await page.goto(quizUrl('unit'), { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+check(`unit quiz shows 20 items`, (await page.locator('[data-theme] nav ol li').count()) === 20);
+
+await page.goto(`${BASE}/showcase/tech/results?node=${b1First.id}&set=unit`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+const resultText = await page.locator('[data-theme]').first().innerText();
+check('results score only the 16 auto-graded items', /\b0 \/ 16\b/.test(resultText));
+check('results say how many items await a teacher', /อีก 4 ข้อจาก 20 ข้อ/.test(resultText));
+check('results list all 20 items for review', /ข้อ 20 จาก 20/.test(resultText));
+
+// ---------- ปุ่มทำแบบฝึกหัด → หน้าเลือกชุด → หน้าข้อสอบ ----------
+// ปุ่มมีเฉพาะคอร์สที่หลักสูตรมีชุดแบบฝึกหัดจริง ไม่ใช่ทุกคอร์ส
+const withPractice = built.find((c) => c.practice?.length);
+const withoutPractice = built.find((c) => !c.practice?.length);
+const firstVideoOf = (course) => resumeContentOf(childrenOf(course.id)[0].id);
+
+await page.goto(`${BASE}/showcase/tech/lesson?node=${firstVideoOf(withPractice).id}`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+const practiceBtn = page.locator('[data-theme] aside button', { hasText: 'ทำแบบฝึกหัด' });
+check(`${withPractice.id}: lesson page offers the practice button`, (await practiceBtn.count()) === 1);
+
+// เพลย์ลิสต์ต้องไม่มีแถวชื่อเลขลอยๆ และไม่มีข้อ 4./5. หลงเหลือ
+const playlistRows = await page.locator('[data-theme] aside ul li').allInnerTexts();
+check(
+  `${withPractice.id}: playlist has no stub rows or practice items`,
+  playlistRows.length > 0 &&
+    !playlistRows.some((r) => /^\s*\d+\.\s*$/.test(r.split('\n')[0]) || /^\s*[45]\./.test(r)),
+);
+
+await practiceBtn.click();
+await page.waitForTimeout(700);
+check('practice button opens /practice', pathOf() === '/showcase/tech/practice');
+
+const skillNames = ['Grammar Practice', 'Reading Practice', 'Listening Practice', 'Writing Practice', 'Speaking Practice'];
+const skillBtns = await Promise.all(
+  skillNames.map((n) => page.locator('[data-theme] button', { hasText: n }).count()),
+);
+check(
+  `practice page lists all five skills (${skillBtns.filter(Boolean).length}/5)`,
+  skillBtns.every((n) => n >= 1),
+);
+
+await page.locator('[data-theme] button', { hasText: 'Speaking Practice' }).first().click();
+await page.waitForTimeout(700);
+check('picking a practice set opens /quiz', pathOf() === '/showcase/tech/quiz');
+
+// คอร์สที่หลักสูตรไม่มีแบบฝึกหัดต้องไม่มีปุ่ม — ไม่งั้นปุ่มพาไปหน้าที่ว่างเปล่า
+await page.goto(`${BASE}/showcase/tech/lesson?node=${firstVideoOf(withoutPractice).id}`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+check(
+  `${withoutPractice.id}: no practice button when the course has no practice sets`,
+  (await page.locator('[data-theme] aside button', { hasText: 'ทำแบบฝึกหัด' }).count()) === 0,
+);
+
+// ---------- เส้นทางต้องอยู่เหนือวิดีโอ ----------
+// ตำแหน่งเดียวกับทุกหน้าอื่นในแอป ผู้เรียนจึงหาทางกลับได้จากที่เดิมเสมอ
+const crumbAbove = await page.evaluate(() => {
+  const nav = document.querySelector('[data-theme] nav[aria-label]');
+  const stage = document.querySelector('[data-theme] main, [data-theme] .ui-surface');
+  const video = [...document.querySelectorAll('[data-theme] [role="slider"], [data-theme] img')].find(
+    (el) => el.closest('.ui-surface'),
+  );
+  if (!nav || !video) return null;
+  return nav.getBoundingClientRect().top < video.getBoundingClientRect().top;
+});
+check('breadcrumb sits above the video stage', crumbAbove === true);
+
+// ---------- ปุ่ม CC ต้องเลือกภาษาคำบรรยายได้จริง ----------
+// เป็นเมนู ไม่ใช่สวิตช์เปิด/ปิด — และข้อความคำบรรยายต้องเปลี่ยนตามแทร็กที่เลือก
+// ไม่ใช่ตามภาษาหน้าเว็บ ซึ่งเป็นความผิดที่เกิดง่ายมากถ้าเผลอใช้ p()
+await page.goto(`${BASE}/showcase/tech/lesson`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+const ccButton = page.locator('[data-theme] button[aria-label="คำบรรยาย"]');
+const ccMenu = page.locator('[data-theme] ul[data-open="true"] li button');
+const capBox = page.locator('[data-theme] .absolute.inset-x-0.bottom-4 span').first();
+
+const capBefore = await capBox.innerText();
+await ccButton.click();
+await page.waitForTimeout(350);
+const ccItems = await ccMenu.allInnerTexts();
+check(
+  `captions menu offers 4 tracks (${ccItems.join(' / ')})`,
+  ccItems.length === 4 && ['ไม่แสดง', 'ภาษาอังกฤษ', 'ภาษาจีน', 'ภาษาไทย'].every((n, i) => ccItems[i] === n),
+);
+
+await ccMenu.filter({ hasText: 'ภาษาจีน' }).click();
+await page.waitForTimeout(350);
+const capZh = await capBox.innerText();
+check(`picking a caption track changes the caption text (${capZh.slice(0, 18)})`, capZh !== capBefore && capZh.length > 0);
+
+await ccButton.click();
+await page.waitForTimeout(300);
+await ccMenu.filter({ hasText: 'ไม่แสดง' }).click();
+await page.waitForTimeout(350);
+check('picking "ไม่แสดง" hides the caption box', (await capBox.count()) === 0);
 
 // ---------- ทุกหน้าต้องเรนเดอร์ได้ลำพังโดยไม่มี query ----------
 // สตูดิโอลิงก์ตรงเข้าหน้าไหนก็ได้ และ ?node ที่ผิดต้องไม่ทำให้ redirect
@@ -268,37 +806,14 @@ await page.goto(`${BASE}/showcase/tech/browse?node=nope`, { waitUntil: 'networki
 await page.waitForTimeout(400);
 check('bad ?node falls back instead of redirecting', pathOf() === '/showcase/tech/browse');
 
-// ---------- เพลย์ลิสต์ต้องเป็นของโครงการนั้นจริง ----------
-// เดิม PlaylistPanel import lessons/sections ระดับโมดูลแล้ววนทั้งก้อนโดยไม่กรอง
-// พอมีหลายโครงการ หน้าสื่อของโครงการอื่นจะโชว์บทเรียน AI ทั้งชุด
-// เป็นบั๊กที่ตาไม่จับถ้าไม่ได้เปิดสองโครงการเทียบกัน
-for (const project of projects.filter((pr) => pr.id !== 'p1')) {
-  await page.goto(`${BASE}/showcase/tech/projects?lang=en`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(300);
-  await page
-    .locator('[data-theme] article[role="button"]', { hasText: project.name.en })
-    .first()
-    .click();
-  await page.waitForTimeout(400);
-  for (let guard = 0; guard < 10 && !pathOf().endsWith('/lesson'); guard++) {
-    const card = page.locator('[data-theme] article[role="button"]').first();
-    const row = page.locator('[data-theme] section ul li button:not([disabled])').first();
-    await ((await card.count()) ? card : row).click();
-    await page.waitForTimeout(400);
-  }
-  const aside = await page.locator('[data-theme] aside').innerText();
-  check(
-    `${project.id}: playlist has no content from another project`,
-    !/scikit-learn|Backpropagation|Gradient descent/i.test(aside),
-  );
-}
-
 // ---------- ขอบ/เงาต้องไม่โดนกล่องที่เลื่อนได้ตัด ----------
 for (const theme of THEMES) {
   await page.goto(`${BASE}/showcase/${theme}/lesson`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(700);
   const room = await page.evaluate(() => {
-    const item = document.querySelector('ul button[aria-current="true"]');
+    // เจาะจง aside เพราะเช็คนี้วัดที่ว่างของ "แถวที่กำลังเล่นในเพลย์ลิสต์"
+    // ปุ่มอื่นในหน้าที่บังเอิญมี aria-current จะทำให้วัดกล่องผิดใบโดยไม่มีอะไรฟ้อง
+    const item = document.querySelector('aside ul button[aria-current="true"]');
     if (!item) return null;
     const clip = item.closest('ul');
     const a = item.getBoundingClientRect();

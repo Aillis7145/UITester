@@ -1,5 +1,7 @@
 export default {
   common: {
+    // The caption line on every ProgressBar that turns on showLabel
+    progress: 'Progress',
     login: 'Sign in',
     logout: 'Sign out',
     next: 'Next',
@@ -25,10 +27,10 @@ export default {
 
   pages: {
     login: 'Sign in',
-    projects: 'Projects',
     subjects: 'Courses',
     browse: 'Browse',
     lesson: 'Lesson',
+    practice: 'Practice',
     quiz: 'Quiz',
     results: 'Results',
   },
@@ -55,16 +57,6 @@ export default {
     estMin: 'about {n} min',
     quizMeta: 'Unlimited attempts',
     onlyMock: 'Screen mock only — not a real file viewer',
-  },
-
-  project: {
-    title: 'Choose a project',
-    lead: 'Each project has its own number of content levels and its own names for them — the steps you click through differ.',
-    ladder: '{n}-level structure',
-    courseCount: '{n} {level}',
-    contentCount: '{n} items',
-    open: 'Open project',
-    switch: 'Switch project',
   },
 
   home: {
@@ -121,6 +113,11 @@ export default {
   subjects: {
     greeting: 'Hi, {name}',
     subGreeting: 'What would you like to learn today?',
+    // This site merges the courses of every subject the customer bought into one grid,
+    // so it needs wording that does not name any one subject's own level.
+    allCourses: 'All courses',
+    countAll: '{n} courses',
+    allSubjects: 'All subjects',
     searchPh: 'Search by name or instructor',
     streak: '{n}-day streak',
     level: 'Level {n}',
@@ -145,6 +142,7 @@ export default {
     qa: 'Q&A',
     notes: 'Notes',
     takeQuiz: 'Take the quiz',
+    doPractice: 'Practice',
     locked: 'Locked',
     watched: 'Watched',
     playing: 'Now playing',
@@ -158,6 +156,11 @@ export default {
     pause: 'Pause',
     speed: 'Speed',
     captions: 'Captions',
+    // The caption-language menu behind the CC button — language names are UI chrome, so t() not p()
+    captionsOff: 'Off',
+    captionEn: 'English',
+    captionZh: 'Chinese',
+    captionTh: 'Thai',
     volume: 'Volume',
     fullscreen: 'Fullscreen',
     settings: 'Settings',
@@ -168,7 +171,40 @@ export default {
     replies: '{n} replies',
   },
 
+  practice: {
+    title: 'Choose a practice set',
+    lead: 'Practice sets for {course}, grouped by the skill they test. Pick one to start.',
+    // Skill names are the standard terms of the field, not per-subject wording — so t() not p()
+    grammar: 'Grammar Practice',
+    reading: 'Reading Practice',
+    listening: 'Listening Practice',
+    writing: 'Writing Practice',
+    speaking: 'Speaking Practice',
+    itemCount: '{n} questions',
+    none: 'This course has no practice sets yet',
+  },
+
   quiz: {
+    // ---- Real quiz sets: listening / passage / writing / speaking ----
+    listen: 'Play the audio',
+    listenAgain: 'Play again',
+    playing: 'Playing',
+    stopAudio: 'Stop',
+    audioHidden: 'Transcript hidden — available on the results page',
+    audioUnsupported: 'This browser cannot read the script aloud',
+    showPassage: 'Show passage',
+    hidePassage: 'Hide passage',
+    guidelines: 'What to include',
+    starter: 'Start with',
+    typeHere: 'Type your answer here',
+    wordCount: '{n} words',
+    record: 'Record your answer',
+    recording: 'Recording',
+    recorded: 'Recorded',
+    rerecord: 'Record again',
+    stopRecording: 'Stop recording',
+    recordMock: 'Screen mock-up — nothing is actually recorded',
+    notAutoGraded: 'Marked by a teacher',
     qOf: 'Question {n} of {total}',
     timeLeft: 'Time left',
     flag: 'Flag for review',
@@ -178,6 +214,8 @@ export default {
     navigator: 'Question map',
     stateAnswered: 'Answered',
     stateUnanswered: 'Unanswered',
+    // Name of the progress bar in the submit-confirmation modal — for screen readers, not shown
+    answered: 'Answered {n} of {total}',
     stateFlagged: 'Flagged',
     stateCurrent: 'Current',
     confirmTitle: 'Submit your answers?',
@@ -187,6 +225,9 @@ export default {
   },
 
   result: {
+    ungradedNote: 'Score covers the multiple-choice items only · {n} of {total} await a teacher',
+    sampleAnswer: 'Sample answer',
+    transcript: 'Audio transcript',
     title: 'Quiz results',
     passed: 'Passed',
     failed: 'Not passed',

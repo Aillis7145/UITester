@@ -9,14 +9,19 @@ import { Tabs } from '@/components/Tabs';
 
 const RESOURCE_ICON = { pdf: 'file', code: 'code', data: 'layers' };
 
-export function LessonTabs({ detail = lessonDetail }) {
+export function LessonTabs({ detail = lessonDetail, resources }) {
   const { t } = useI18n();
   const [tab, setTab] = useState('overview');
   const panelId = useId();
 
+  // เอกสารของหน่วยมาก่อนไฟล์กลาง — คอร์สที่ทุกหัวข้อเป็นวิดีโอมีที่เดียวให้เอกสารอยู่คือตรงนี้
+  const files = resources ?? detail.resources;
+
   const items = [
     { id: 'overview', label: t('lesson.overview'), icon: 'list' },
-    { id: 'docs', label: t('lesson.docs'), icon: 'file' },
+    // ติดจำนวนไว้บนแท็บ เพราะเมื่อเพลย์ลิสต์ไม่มีเอกสารแทรกแล้ว
+    // แท็บนี้คือทางเดียวที่ผู้เรียนจะรู้ว่าบทนี้มีไฟล์ให้โหลดกี่ไฟล์ โดยไม่ต้องกดเข้าไปดู
+    { id: 'docs', label: `${t('lesson.docs')} · ${files.length}`, icon: 'file' },
     { id: 'qa', label: t('lesson.qa'), icon: 'users' },
     { id: 'notes', label: t('lesson.notes'), icon: 'bookmark' },
   ];
@@ -27,7 +32,7 @@ export function LessonTabs({ detail = lessonDetail }) {
 
       <div id={panelId} role="tabpanel" className="p-5 sm:p-6">
         {tab === 'overview' && <Overview detail={detail} />}
-        {tab === 'docs' && <Resources detail={detail} />}
+        {tab === 'docs' && <Resources files={files} />}
         {tab === 'qa' && <QA detail={detail} />}
         {tab === 'notes' && <Notes detail={detail} />}
       </div>
@@ -56,11 +61,11 @@ function Overview({ detail }) {
   );
 }
 
-function Resources({ detail }) {
+function Resources({ files }) {
   const { p } = useI18n();
   return (
     <ul className="grid gap-2.5">
-      {detail.resources.map((res) => (
+      {files.map((res) => (
         <li key={res.id}>
           <button
             type="button"

@@ -1,6 +1,6 @@
 import { useI18n } from '@/i18n/I18nProvider';
 import { splitMinutes } from '@/mock/data';
-import { contentCountOf, progressOf } from '@/mock/nodes';
+import { contentCountOf, progressOf, getProject } from '@/mock/nodes';
 import { Badge } from '@/components/Badge';
 import { Icon } from '@/components/Icon';
 import { ProgressBar } from '@/components/ProgressBar';
@@ -20,7 +20,8 @@ export function SubjectCard({ node, onOpen }) {
   // ตัวเลขที่เขียนติดไว้มีโอกาสไม่ตรงกับของจริงเสมอ และเคยไม่ตรงมาแล้ว
   const progress = progressOf(node.id);
   const total = contentCountOf(node.id);
-  const started = progress > 0;
+  // หาวิชาเองจาก projectId ไม่รับเป็น prop — BrowseScreen จึงไม่ต้องรู้เรื่องนี้เลย
+  const subject = getProject(node.projectId);
 
   return (
     <article
@@ -46,7 +47,20 @@ export function SubjectCard({ node, onOpen }) {
         />
 
         {/* ไล่เฉดมืดด้านล่างเพื่อให้ป้ายเวลาอ่านออกบนภาพทุกแบบ */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/25" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/55 via-transparent to-black/25" />
+
+        {/* แท็กวิชา — อยู่บนภาพ ไม่ใช่ในแถวแท็กด้านล่าง
+
+            แถวแท็กด้านล่างตอบว่า "ข้างในมีอะไร" ส่วนวิชาตอบว่า "การ์ดนี้มาจากสินค้าตัวไหน"
+            ถ้ารวมแถวเดียวกัน ลูกค้าที่ซื้อหลายวิชาจะเห็น "คณิต" น้ำหนักเท่ากับ "หลักสูตรแกนกลาง"
+            แล้วการรวมกริดอ่านไม่ออกพอดีในเคสที่มันมีอยู่เพื่อสิ่งนั้น
+
+            ใช้พื้นทึบของตัวเองเหมือนป้ายเวลาข้างล่าง ไม่ใช่ Badge tone="neutral"
+            เพราะ Badge พึ่ง --color-surface-2 ซึ่งบางธีมโปร่งจนอ่านไม่ออกบนภาพสว่าง */}
+        <span className="absolute right-3 top-3 inline-flex max-w-[45%] items-center gap-1.5 rounded-ui bg-black/65 px-2 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+          <Icon name={subject.icon} size={12} className="shrink-0" />
+          <span className="truncate">{p(subject.short)}</span>
+        </span>
 
         <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-ui bg-primary px-2.5 py-1 text-xs font-bold text-on-primary shadow-raised">
           <Icon name={node.icon} size={13} />
@@ -89,26 +103,9 @@ export function SubjectCard({ node, onOpen }) {
         </div>
 
         <div className="mt-auto pt-4">
-          {started ? (
-            <>
-              <div className="mb-1.5 flex items-center justify-between text-sm">
-                <span className="text-muted">{t('subjects.continueCta')}</span>
-                <span className="font-semibold text-primary-ink">
-                  {Math.round(progress * 100)}%
-                </span>
-              </div>
-              <ProgressBar value={progress} size="sm" label={p(node.title)} />
-            </>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-ink">
-              {t('subjects.start')}
-              <Icon
-                name="arrowRight"
-                size={15}
-                className="transition-transform duration-(--dur-base) group-hover:translate-x-1"
-              />
-            </span>
-          )}
+          {/* ไม่ส่ง caption — โจทย์ระบุว่าทุกแถบต้องกำกับด้วยคำว่า "ความคืบหน้า"
+              เดิมตรงนี้เขียน "เริ่มเรียน / เรียนต่อ" ซึ่งเป็นคำเชิญชวน ไม่ใช่ชื่อของสิ่งที่แถบวัด */}
+          <ProgressBar value={progress} size="sm" showLabel />
         </div>
       </div>
     </article>

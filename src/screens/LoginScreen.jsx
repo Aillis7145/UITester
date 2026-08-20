@@ -35,7 +35,7 @@ export function LoginScreen({ onNavigate }) {
       // เข้าหน้าเลือกโครงการก่อนเสมอ ไม่ข้ามไปหน้าคอร์สเลย
       // เพราะผู้เรียนอาจอยู่หลายโครงการ และแต่ละโครงการมีโครงสร้างเนื้อหาคนละแบบ
       // ล้าง ?project/?node ที่ค้างอยู่ด้วย ไม่งั้นการล็อกอินใหม่จะพาไปโครงการเดิมของรอบก่อน
-      onNavigate?.('projects', { project: null, node: null });
+      onNavigate?.('subjects', { node: null });
     }, 900);
   };
 

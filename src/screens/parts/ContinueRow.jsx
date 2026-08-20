@@ -1,20 +1,20 @@
 import { useI18n } from '@/i18n/I18nProvider';
-import { continueLearning, formatDuration } from '@/mock/data';
-import { getNode, progressOf } from '@/mock/nodes';
+import { formatDuration } from '@/mock/data';
+import { continueLearning, getNode, progressOf } from '@/mock/nodes';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { ProgressBar } from '@/components/ProgressBar';
 
 /**
- * แถว "เรียนต่อจากที่ค้างไว้" — การ์ดกว้างที่ต่างจากกริดวิชาด้านล่างอย่างชัดเจน
+ * แถว "เรียนต่อจากที่ค้างไว้" — การ์ดกว้างที่ต่างจากกริดคอร์สด้านล่างอย่างชัดเจน
  *
- * แสดงเฉพาะของโครงการที่กำลังเปิดอยู่
- * เพราะหน้านี้เป็นหน้าในบริบทของโครงการเดียว การโผล่คอร์สข้ามโครงการมาจะสับสน
- * ว่าตกลงกำลังดูอะไรอยู่ และกดแล้วจะเด้งออกไปอีกโครงการโดยไม่ได้ตั้งใจ
+ * ข้ามวิชาได้โดยตั้งใจ เพราะเว็บนี้เป็นของลูกค้ารายเดียวที่อาจซื้อหลายวิชา
+ * สิ่งที่เขาค้างไว้จริงๆ ก็คละวิชาอยู่แล้ว การกรองให้เหลือวิชาเดียวจะซ่อนของที่เขาตามหาอยู่
+ * ชื่อคอร์สบนการ์ดบอกอยู่แล้วว่ากดแล้วจะไปไหน
  */
-export function ContinueRow({ projectId, onOpen }) {
+export function ContinueRow({ onOpen }) {
   const { t, p } = useI18n();
-  const items = continueLearning.filter((item) => item.projectId === projectId);
+  const items = continueLearning;
 
   // ไม่มีอะไรค้างอยู่ก็ไม่ต้องมีหัวข้อลอยๆ ให้เกะกะ
   if (items.length === 0) return null;
@@ -57,12 +57,7 @@ export function ContinueRow({ projectId, onOpen }) {
                 <h3 className="ui-heading mt-0.5 line-clamp-1 text-base">
                   {node ? p(node.title) : p(course.subtitle)}
                 </h3>
-                <div className="mt-2.5 flex items-center gap-2.5">
-                  <ProgressBar value={progress} size="sm" className="flex-1" />
-                  <span className="shrink-0 text-sm font-semibold text-primary-ink">
-                    {Math.round(progress * 100)}%
-                  </span>
-                </div>
+                <ProgressBar value={progress} size="sm" showLabel className="mt-2.5" />
               </div>
 
               <Button

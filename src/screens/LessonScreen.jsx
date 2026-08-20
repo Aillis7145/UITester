@@ -4,7 +4,7 @@ import { useScreenState } from './screenState';
 import { useAppRoute } from './appRoute';
 import { crumbsFor, targetFor } from './nav';
 import { currentLessonProgressSec } from '@/mock/data';
-import { getNode, childrenOf, siblingsOf, courseOf } from '@/mock/nodes';
+import { getNode, childrenOf, courseOf, unitOf, nextLevel, levelDef } from '@/mock/nodes';
 import { ContentStage } from './parts/ContentStage';
 import { PlaylistPanel } from './parts/PlaylistPanel';
 import { LessonTabs } from './parts/LessonTabs';
@@ -25,16 +25,26 @@ export function LessonScreen({ onNavigate }) {
   // ตำแหน่งมาจาก URL ไม่ใช่ useState — deep link จึงตรงกับสิ่งที่เห็นจริง
   // และภาพในโหมดเทียบข้างกับภาพถ่ายอัตโนมัติได้ผลเหมือนกันทุกครั้ง
   const { project, node: content } = useAppRoute();
-  const parent = getNode(content.parentId);
   const course = courseOf(content.id);
 
-  // เพลย์ลิสต์ = พี่น้องของสื่อชิ้นนี้ จัดกลุ่มตามพี่น้องของกล่องแม่
-  // โครงการที่ตื้นกว่าจึงยุบเหลือกลุ่มน้อยลงเองโดยไม่ต้องมีเงื่อนไขไหนรู้ความลึก
-  //
-  // แต่ถ้ากล่องแม่เป็นคอร์ส (โครงการชั้นเดียว) พี่น้องของมันคือ "ทุกคอร์สในโครงการ"
-  // ซึ่งจะลากวิดีโอของชั้นปีอื่นมาไว้ในเพลย์ลิสต์ด้วยทั้งหมด — กรณีนั้นเหลือกลุ่มเดียวพอ
-  const scope = parent.parentId ? siblingsOf(parent.id) : [parent];
-  const groups = scope.map((g) => ({ node: g, items: childrenOf(g.id) }));
+  /**
+   * เพลย์ลิสต์ = "ทุกอย่างในหน่วยที่เลือก" เท่านั้น
+   *
+   * เดิมใช้พี่น้องของกล่องแม่ ซึ่งลากหัวข้อของ *ทุกหน่วยพี่น้อง* เข้ามาด้วย
+   * พอเป็นหลักสูตรจริง หน้าวิดีโอของภาคเรียนที่ 1 จะโชว์หัวข้อของภาคเรียนที่ 2 ปนมาทั้งชุด
+   *
+   * ถามความลึกจาก "ประกาศของวิชา" ไม่ใช่จากตัวอย่างลูกใบแรก
+   * เพราะหน่วยที่ว่างจะพาไปกิ่งผิดเงียบๆ โดยไม่มีอะไรฟ้อง
+   */
+  const unit = unitOf(content.id) ?? getNode(content.parentId);
+  const grouped = nextLevel(project, unit.level) !== 'content';
+  // ชื่อหน่วยจากหลักสูตรจริงบางทีขึ้นต้นด้วยชื่อชั้นอยู่แล้ว ("ภาคเรียนที่ 1")
+  // ปล่อยไว้หัวแผงจะอ่านว่า "ภาคเรียน 1 / ภาคเรียนที่ 1" ซ้อนกัน
+  const unitLabel = p(levelDef(project, unit.level).label);
+  const unitKicker = p(unit.title).startsWith(unitLabel) ? undefined : `${unitLabel} ${unit.order}`;
+  const groups = grouped
+    ? childrenOf(unit.id).map((g) => ({ node: g, items: childrenOf(g.id) }))
+    : [{ node: unit, items: childrenOf(unit.id) }];
 
   if (showSkeleton) return <LessonSkeleton />;
 
@@ -43,15 +53,18 @@ export function LessonScreen({ onNavigate }) {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         {/* ---------- คอลัมน์ซ้าย ---------- */}
         <div className="min-w-0 space-y-5">
+          {/* เส้นทางอยู่ "เหนือวิดีโอ" — ตำแหน่งเดียวกับทุกหน้าอื่นในแอป
+              ผู้เรียนจึงหาทางกลับได้จากที่เดิมเสมอ ไม่ต้องเลื่อนผ่านวิดีโอลงไปหา
+
+              ต้องอยู่ในคอลัมน์ซ้าย ห้ามย้ายออกไปเหนือกริด
+              เพราะ PlaylistPanel คำนวณความสูงจาก calc(var(--frame-h) - 8rem)
+              ของที่แทรกเหนือกริดจะดันคอลัมน์ขวาลง แล้วปุ่มท้ายเพลย์ลิสต์ตกนอกกรอบเครื่อง */}
+          <Breadcrumb items={crumbsFor({ project, node: content, onNavigate, p, t })} />
+
           <ContentStage node={content} hue={course.hue} startSec={currentLessonProgressSec} />
 
           <div>
-            {/* เส้นทาง — อยู่ในคอลัมน์ซ้ายใต้วิดีโอโดยตั้งใจ ห้ามย้ายขึ้นไปเหนือกริด
-                เพราะ PlaylistPanel คำนวณความสูงจาก calc(var(--frame-h) - 8rem)
-                ถ้าดันแถวนี้ขึ้นไป ปุ่มทำแบบทดสอบท้ายเพลย์ลิสต์จะตกนอกกรอบเครื่อง */}
-            <Breadcrumb items={crumbsFor({ project, node: content, onNavigate, p })} />
-
-            <h1 className="ui-heading mt-2.5 text-2xl sm:text-3xl">{p(content.title)}</h1>
+            <h1 className="ui-heading text-2xl sm:text-3xl">{p(content.title)}</h1>
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -60,7 +73,11 @@ export function LessonScreen({ onNavigate }) {
                   <p className="text-sm font-semibold">{p(course.instructor)}</p>
                   <p className="text-xs text-muted">{t('lesson.instructor')}</p>
                 </div>
-                <Badge tone="primary" size="sm" className="ml-1">
+                {/* วิชาก่อน แล้วค่อยระดับ — เส้นทางขึ้นต้นด้วย "คอร์สทั้งหมด" จึงไม่ได้บอกวิชา */}
+                <Badge tone="primary" size="sm" icon={project.icon} className="ml-1">
+                  {p(project.short)}
+                </Badge>
+                <Badge tone="neutral" size="sm">
                   {p(course.difficulty)}
                 </Badge>
               </div>
@@ -85,7 +102,9 @@ export function LessonScreen({ onNavigate }) {
             </div>
           </div>
 
-          <LessonTabs detail={content.detail ?? course.detail} />
+          {/* เอกสารเป็นของ "หน่วย" ไม่ใช่ของคลิป จึงส่งมาจาก unit ไม่ใช่ content
+              คอร์สที่ไม่มี unit.resources ตกไปใช้ไฟล์กลางของ detail เหมือนเดิม */}
+          <LessonTabs detail={content.detail ?? course.detail} resources={unit.resources} />
         </div>
 
         {/* ---------- คอลัมน์ขวา ---------- */}
@@ -93,9 +112,11 @@ export function LessonScreen({ onNavigate }) {
           <PlaylistPanel
             groups={groups}
             currentId={content.id}
-            title={p(parent.title)}
-            onSelect={(n) => onNavigate?.(...targetFor(n, project))}
-            onTakeQuiz={() => onNavigate?.('quiz')}
+            title={p(unit.title)}
+            kicker={unitKicker}
+            onSelect={(n) => onNavigate?.(...targetFor(n))}
+            onPractice={course.practice?.length ? () => onNavigate?.('practice', { node: content.id }) : undefined}
+            onTakeQuiz={() => onNavigate?.('quiz', { node: content.id, set: 'unit' })}
           />
         </aside>
       </div>

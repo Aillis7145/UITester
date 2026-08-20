@@ -1,7 +1,8 @@
 import { useI18n } from '@/i18n/I18nProvider';
 import { useThemeMeta } from '@/theme/ThemeFrame';
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
-import { quiz, quizResult, scoreQuiz } from '@/mock/data';
+import { quizResult, scoreQuiz } from '@/mock/data';
+import { useAppRoute } from './appRoute';
 import { formatClock } from '@/hooks/useCountdown';
 import { TopicBreakdown } from './parts/TopicBreakdown';
 import { AnswerReviewItem } from './parts/AnswerReviewItem';
@@ -13,6 +14,7 @@ import { ProgressRing } from '@/components/ProgressRing';
 export function ResultsScreen({ onNavigate }) {
   const { t, p } = useI18n();
   const { decor } = useThemeMeta();
+  const { quiz } = useAppRoute();
   const reduced = usePrefersReducedMotion();
 
   // คำนวณจากคำตอบจริง ไม่ hardcode คะแนน — ตัวเลขทุกจุดในหน้านี้จึงตรงกันเสมอ
@@ -40,6 +42,14 @@ export function ResultsScreen({ onNavigate }) {
             </span>
           </div>
         </ProgressRing>
+
+        {/* ข้อเขียน/ข้อพูดไม่เข้าตัวหาร ต้องบอกให้ชัดว่าคะแนนนี้คิดจากกี่ข้อ
+            ไม่งั้นผู้เรียนเห็น 14/16 ทั้งที่ทำไป 20 ข้อแล้วงงว่าอีก 4 ข้อหายไปไหน */}
+        {result.ungraded > 0 && (
+          <p className="mt-3 text-sm text-muted">
+            {t('result.ungradedNote', { n: result.ungraded, total: result.questionCount })}
+          </p>
+        )}
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
           <Badge tone={tone} icon={result.passed ? 'trophy' : 'refresh'}>
@@ -110,7 +120,9 @@ export function ResultsScreen({ onNavigate }) {
               key={question.id}
               question={question}
               index={i}
-              result={{ ...result.perQuestion[i], total: result.total }}
+              // total ที่ส่งไปคือจำนวนข้อ "ทั้งชุด" ไม่ใช่จำนวนข้อที่คิดคะแนน
+              // ไม่งั้นแถวทบทวนจะเขียนว่า "ข้อ 20 จาก 16" ในชุดที่มีข้อเขียนปนอยู่
+              result={{ ...result.perQuestion[i], total: result.questionCount }}
             />
           ))}
         </ul>

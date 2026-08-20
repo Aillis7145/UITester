@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useScreenState } from './screenState';
 import { useCountdown } from '@/hooks/useCountdown';
-import { quiz, submittedAnswers } from '@/mock/data';
+import { submittedAnswers } from '@/mock/data';
+import { useAppRoute } from './appRoute';
 import { QuestionCard } from './parts/QuestionCard';
 import { QuestionNavigator } from './parts/QuestionNavigator';
 import { QuizTimer } from './parts/QuizTimer';
@@ -15,20 +16,24 @@ import { cn } from '@/lib/cn';
 export function QuizScreen({ onNavigate }) {
   const { t, p } = useI18n();
   const { forceLoading } = useScreenState();
+  const { quiz } = useAppRoute();
 
-  // เริ่มที่ข้อ 4 โดยตั้งใจ: ผังข้อสอบมีครบทั้ง 4 สถานะตั้งแต่เปิดหน้า
-  // และข้อนี้มีบล็อกโค้ด ซึ่งเป็นจุดที่ธีมต่างกันชัด (ฟอนต์ mono + พื้นผิว inset)
-  const [index, setIndex] = useState(3);
-  const [answers, setAnswers] = useState(() => ({
-    q1a: submittedAnswers.q1a,
-    q2a: submittedAnswers.q2a,
-    q3a: submittedAnswers.q3a,
-  }));
-  const [flagged, setFlagged] = useState(() => new Set(['q5a']));
+  /**
+   * ชุดตัวอย่างเปิดมาแบบ "ทำไปแล้วบางส่วน" เพราะเป็นหน้าโชว์ —
+   * เริ่มข้อ 4 ผังข้อสอบจึงมีครบทั้ง 4 สถานะตั้งแต่เปิด และข้อนั้นมีบล็อกโค้ดที่ธีมต่างกันชัด
+   *
+   * ชุดจริงต้องเริ่มข้อ 1 และว่างเปล่า ไม่งั้นผู้เรียนเปิดมาเจอคำตอบของคนอื่นติดมาแล้ว
+   */
+  const demo = quiz.demo === true;
+  const [index, setIndex] = useState(demo ? 3 : 0);
+  const [answers, setAnswers] = useState(() =>
+    demo ? { q1a: submittedAnswers.q1a, q2a: submittedAnswers.q2a, q3a: submittedAnswers.q3a } : {},
+  );
+  const [flagged, setFlagged] = useState(() => new Set(demo ? ['q5a'] : []));
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const { left } = useCountdown(quiz.timeLimitSec - 155);
+  const { left } = useCountdown(quiz.timeLimitSec - (demo ? 155 : 0));
 
   const questions = quiz.questions;
   const question = questions[index];
@@ -73,6 +78,8 @@ export function QuizScreen({ onNavigate }) {
         <QuizTimer secondsLeft={left} />
       </header>
 
+      {/* ไม่เปิด showLabel โดยตั้งใจ — แถบนี้วัด "ข้อ 3 จาก 10" ไม่ใช่ความคืบหน้าการเรียน
+          ติดคำว่า "ความคืบหน้า" ให้จะกลายเป็นคำโกหกที่อ่านแล้วสับสนกับแถบในหน้าอื่น */}
       <ProgressBar
         value={(index + 1) / questions.length}
         className="mt-3"
@@ -158,9 +165,12 @@ export function QuizScreen({ onNavigate }) {
           </>
         }
       >
+        {/* ประโยคเหนือแถบในโมดัลอธิบายอยู่แล้ว จึงไม่ต้องมีบรรทัดกำกับซ้ำ
+            แต่ต้องมี label ให้ screen reader — เดิมไม่มีเลย อ่านออกมาเป็นแถบไร้ชื่อ */}
         <ProgressBar
           value={answeredCount / questions.length}
           tone={answeredCount === questions.length ? 'success' : 'warn'}
+          label={t('quiz.answered', { n: answeredCount, total: questions.length })}
         />
       </Modal>
     </div>

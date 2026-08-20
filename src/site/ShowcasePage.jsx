@@ -191,7 +191,7 @@ export function ShowcasePage() {
             style={{ '--frame-h': `${frameHeight}px` }}
           >
             <ScreenStateProvider value={state}>
-              <AppRouteProvider pageId={pageId} projectId={sp.get('project')} nodeId={sp.get('node')}>
+              <AppRouteProvider pageId={pageId} nodeId={sp.get('node')} setId={sp.get('set')}>
                 <AppShell pageId={pageId} onNavigate={nav}>
                   <Screen onNavigate={nav} />
                 </AppShell>
@@ -212,8 +212,9 @@ export function ShowcasePage() {
           onNavigate={nav}
           state={state}
           Screen={Screen}
-          projectId={sp.get('project')}
+         
           nodeId={sp.get('node')}
+          setId={sp.get('set')}
         />
       )}
     </div>
@@ -225,7 +226,7 @@ export function ShowcasePage() {
  * ปุ่มปิดวางบนเลเยอร์ของสตูดิโอ (สีกลาง) ไม่ใช่ของธีม
  * เพื่อให้หาเจอเสมอไม่ว่าธีมข้างล่างจะสว่างหรือมืด
  */
-function FullscreenView({ themeId, pageId, onClose, onNavigate, state, Screen, projectId, nodeId }) {
+function FullscreenView({ themeId, pageId, onClose, onNavigate, state, Screen, nodeId, setId }) {
   const { t } = useI18n();
 
   return (
@@ -237,7 +238,7 @@ function FullscreenView({ themeId, pageId, onClose, onNavigate, state, Screen, p
         style={{ '--frame-h': '100dvh' }}
       >
         <ScreenStateProvider value={state}>
-          <AppRouteProvider pageId={pageId} projectId={projectId} nodeId={nodeId}>
+          <AppRouteProvider pageId={pageId} nodeId={nodeId} setId={setId}>
             <AppShell pageId={pageId} onNavigate={onNavigate}>
               <Screen onNavigate={onNavigate} />
             </AppShell>

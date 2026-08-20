@@ -8,12 +8,12 @@
  * ลำดับในนี้คือลำดับที่ผู้เรียนเดินผ่านจริง ใช้เป็นลำดับปุ่มในสตูดิโอด้วย
  * ใส่ id ได้เฉพาะหน้าที่มีคอมโพเนนต์จริงแล้วเท่านั้น ไม่งั้นสตูดิโอจะมีปุ่มที่กดแล้วเด้งกลับ
  */
-export const PAGE_IDS = ['login', 'projects', 'subjects', 'browse', 'lesson', 'quiz', 'results'];
+export const PAGE_IDS = ['login', 'subjects', 'browse', 'lesson', 'practice', 'quiz', 'results'];
 
 /**
  * เมนูใน "ตัวแอป" — เลือกจากมุมของผู้เรียน ไม่ใช่ส่วนเติมเต็มของเซตทางเทคนิค
  *
- * ไม่ใส่ projects กับ browse เพราะทั้งคู่ต้องมี ?project / ?node ถึงจะมีความหมาย
+ * ไม่ใส่ browse กับ practice เพราะทั้งคู่ต้องมี ?node ถึงจะมีความหมาย
  * ปุ่มเมนูที่กดแล้วต้องเดาเองว่าจะพาไปไหนไม่ใช่เมนู
  */
 export const APP_NAV_IDS = ['subjects', 'lesson', 'quiz', 'results'];
@@ -21,20 +21,13 @@ export const APP_NAV_IDS = ['subjects', 'lesson', 'quiz', 'results'];
 /** หน้าที่ไม่มีแถบบนเลย — ยังไม่ได้เข้าระบบ จึงยังไม่มีอะไรให้ไป */
 export const CHROMELESS_PAGES = ['login'];
 
-/**
- * หน้าที่มีแถบบนแต่ไม่มีเมนู (คอร์ส/บทเรียน/แบบทดสอบ/ผลสอบ) และไม่มีตัวสลับโครงการ
- * หน้าเลือกโครงการยังไม่ได้อยู่ในโครงการไหน เมนูพวกนั้นจึงยังไม่มีความหมาย
- * แต่ยังต้องมีแบรนด์กับเครื่องมือฝั่งขวา เพื่อให้รู้ว่าอยู่ในแอปเดียวกันไม่ใช่หลุดออกไปไหน
- */
-export const NAVLESS_PAGES = ['projects'];
-
 /** ไอคอนของแต่ละหน้าใน nav ของสตูดิโอ */
 export const PAGE_ICONS = {
   login: 'lock',
-  projects: 'layers',
   subjects: 'grid',
   browse: 'list',
   lesson: 'play',
+  practice: 'list',
   quiz: 'flag',
   results: 'trophy',
 };

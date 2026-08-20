@@ -1,22 +1,34 @@
 import { useI18n } from '@/i18n/I18nProvider';
-import { contentCountOf, progressOf } from '@/mock/nodes';
+import { contentCountOf, progressOf, courseOf } from '@/mock/nodes';
 import { Icon } from '@/components/Icon';
 import { ProgressBar } from '@/components/ProgressBar';
 
 /**
- * การ์ดของกล่องเนื้อหาที่ไม่มีรูปปก (หน่วย / บท / หัวข้อ / ตอน)
+ * การ์ดของกล่องชั้นกลาง (ภาคเรียน / บท / หมวด / หน่วย)
  *
- * แยกจาก SubjectCard เพราะชั้นกลางไม่มีภาพประกอบ
- * ถ้าเอา SubjectCard มาใช้ทั้งดุ้นจะได้กล่องสีเทาเปล่า 16:10 ซึ่งอ่านว่า "รูปโหลดไม่ขึ้น"
- * ที่นี่จึงแทนภาพด้วยเลขลำดับตัวโต ซึ่งเป็นสิ่งที่ผู้เรียนใช้อ้างอิงกันจริงอยู่แล้ว
+ * รูปทรงเดียวกับ SubjectCard โดยตั้งใจ — ปกเต็มความกว้างด้านบน ข้อมูลด้านล่าง
+ * เพราะหน้าไล่ระดับกับหน้าคอร์สคือ "กริดของสิ่งที่กดเข้าไปได้" เหมือนกัน
+ * การใช้คนละทรงทำให้ผู้เรียนต้องเรียนรู้วิธีกวาดตาใหม่ทั้งที่เป็นงานเดียวกัน
  *
- * levelLabel ส่งเข้ามาจากหน้าจอ เพราะชื่อชั้นเป็นของโครงการ ไม่ใช่ของคอมโพเนนต์
+ * แยกไฟล์จาก SubjectCard ต่อไป เพราะกล่องชั้นกลางไม่มี rating / instructor /
+ * durationMin / tags ให้แสดง การยัด SubjectCard มาใช้จะได้การ์ดที่มีช่องว่างหลายช่อง
+ *
+ * levelLabel ส่งเข้ามาจากหน้าจอ เพราะชื่อชั้นเป็นของวิชา ไม่ใช่ของคอมโพเนนต์
  */
 export function NodeCard({ node, levelLabel, onOpen }) {
   const { t, p } = useI18n();
   const total = contentCountOf(node.id);
   const progress = progressOf(node.id);
   const done = progress >= 1;
+
+  // หลักสูตรจริงตั้งชื่อหน่วยเองซึ่งบางทีขึ้นต้นด้วยชื่อชั้นอยู่แล้ว ("ภาคเรียนที่ 1")
+  // ปล่อยไว้จะได้ป้าย "ภาคเรียน 1" ทับชื่อ "ภาคเรียนที่ 1" ซึ่งอ่านซ้ำสองรอบ
+  // เหลือแค่เลขลำดับก็พอ เพราะเลขคือสิ่งที่ผู้เรียนใช้อ้างอิงกันจริงอยู่แล้ว
+  const numbered = p(node.title).startsWith(levelLabel);
+  const badge = numbered ? String(node.order) : `${levelLabel} ${node.order}`;
+
+  // กล่องชั้นที่ลึกกว่าหน่วยไม่มีปกของตัวเอง — ยืมของคอร์สแทนการโชว์กล่องเทาเปล่า
+  const cover = node.cover ?? courseOf(node.id)?.cover;
 
   return (
     <article
@@ -29,49 +41,49 @@ export function NodeCard({ node, levelLabel, onOpen }) {
           onOpen?.();
         }
       }}
-      className="ui-surface ui-interactive ui-focusable group flex cursor-pointer items-start gap-4 p-4 text-left"
+      className="ui-surface ui-interactive ui-focusable group flex cursor-pointer flex-col overflow-hidden p-0 text-left"
     >
-      <span
-        aria-hidden="true"
-        className="grid h-12 w-12 shrink-0 place-items-center rounded-ui text-lg font-bold tabular-nums"
-        style={{
-          background: 'color-mix(in oklch, var(--color-primary) 14%, transparent)',
-          color: 'var(--color-primary-ink)',
-        }}
-      >
-        {node.order}
-      </span>
+      {/* ---------- ปก ---------- */}
+      <div className="relative aspect-16/10 w-full overflow-hidden bg-surface-2">
+        <img
+          src={cover}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover transition-transform duration-(--dur-slow) ease-(--ease-smooth) group-hover:scale-105"
+        />
 
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-          {levelLabel} {node.order}
-        </p>
-        <h3 className="ui-heading mt-0.5 line-clamp-2 text-base">{p(node.title)}</h3>
+        {/* ไล่เฉดมืดทั้งบนและล่างเพื่อให้ป้ายอ่านออกบนภาพทุกแบบ */}
+        <div className="absolute inset-0 bg-linear-to-t from-black/55 via-transparent to-black/25" />
 
-        <div className="mt-2 flex items-center gap-3 text-sm text-muted">
-          <span className="flex items-center gap-1.5">
-            <Icon name="list" size={13} />
-            {t('browse.inside', { n: total })}
+        <span className="absolute left-3 top-3 inline-flex items-center rounded-ui bg-primary px-2.5 py-1 text-xs font-bold tabular-nums text-on-primary shadow-raised">
+          {badge}
+        </span>
+
+        {done && (
+          <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-ui bg-black/65 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
+            <Icon name="check" size={12} strokeWidth={3} />
+            {t('browse.done')}
           </span>
-          {done && (
-            <span className="flex items-center gap-1.5 text-success">
-              <Icon name="check" size={13} strokeWidth={3} />
-              {t('browse.done')}
-            </span>
-          )}
-        </div>
+        )}
 
-        <div className="mt-3 flex items-center gap-2.5">
-          <ProgressBar value={progress} size="sm" label={p(node.title)} className="flex-1" />
-          <span className="shrink-0 text-sm font-semibold text-primary-ink">
-            {Math.round(progress * 100)}%
-          </span>
-        </div>
+        {/* ป้ายจำนวนใช้พื้นทึบของตัวเอง ไม่ใช่ token ของธีม
+            เพราะภาพถ่ายมีสีอะไรก็ได้ ป้ายโปร่งใสจะอ่านไม่ออกบนภาพสว่าง */}
+        <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-ui bg-black/65 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
+          <Icon name="list" size={12} />
+          {t('browse.inside', { n: total })}
+        </span>
       </div>
 
-      <span className="mt-1 shrink-0 text-muted transition-transform duration-(--dur-base) group-hover:translate-x-1">
-        <Icon name="chevronRight" size={18} />
-      </span>
+      {/* ---------- ข้อมูล ---------- */}
+      <div className="flex flex-1 flex-col p-4">
+        <h3 className="ui-heading line-clamp-2 text-base">{p(node.title)}</h3>
+
+        {/* mt-auto ดันแถบลงล่างสุดเสมอ การ์ดที่ชื่อสั้นกับชื่อยาวจึงมีแถบตรงระดับเดียวกัน */}
+        <div className="mt-auto pt-4">
+          <ProgressBar value={progress} size="sm" showLabel />
+        </div>
+      </div>
     </article>
   );
 }

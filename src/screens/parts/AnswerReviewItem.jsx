@@ -9,6 +9,8 @@ export function AnswerReviewItem({ question, result, index }) {
   const { t, p, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const labels = lang === 'th' ? THAI_LABELS : LATIN_LABELS;
+  // ข้อเขียน/ข้อพูดไม่มี choices ให้แปลงเป็นป้าย ก/ข/ค/ง — ต้องแยกกิ่งไม่งั้นพังเป็นจอขาว
+  const graded = result.graded !== false;
 
   const labelOf = (ids) =>
     ids.length
@@ -26,14 +28,14 @@ export function AnswerReviewItem({ question, result, index }) {
         aria-expanded={open}
         className="ui-focusable flex w-full items-start gap-3 p-4 text-left transition-colors duration-(--dur-fast) hover:bg-surface-2"
       >
-        <span
+<span
           className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full"
           style={{
-            background: `color-mix(in oklch, var(--color-${result.correct ? 'success' : 'danger'}) 20%, transparent)`,
-            color: `var(--color-${result.correct ? 'success' : 'danger'})`,
+            background: `color-mix(in oklch, var(--color-${graded ? (result.correct ? 'success' : 'danger') : 'warn'}) 20%, transparent)`,
+            color: `var(--color-${graded ? (result.correct ? 'success' : 'danger') : 'warn'})`,
           }}
         >
-          <Icon name={result.correct ? 'check' : 'x'} size={15} strokeWidth={3} />
+          <Icon name={graded ? (result.correct ? 'check' : 'x') : 'flag'} size={15} strokeWidth={3} />
         </span>
 
         <span className="min-w-0 flex-1">
@@ -57,32 +59,65 @@ export function AnswerReviewItem({ question, result, index }) {
       >
         <div className="min-h-0 overflow-hidden">
           <div className="border-t border-border p-4">
-            <dl className="grid gap-2 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-muted">{t('result.yourAnswer')}</dt>
-                <dd
-                  className={cn('mt-0.5 font-semibold')}
-                  style={{ color: `var(--color-${result.correct ? 'success' : 'danger'})` }}
-                >
-                  {labelOf(result.selectedIds)}
-                </dd>
-              </div>
-              {!result.correct && (
+{graded ? (
+              <dl className="grid gap-2 text-sm sm:grid-cols-2">
                 <div>
-                  <dt className="text-muted">{t('result.correctAnswer')}</dt>
-                  <dd className="mt-0.5 font-semibold" style={{ color: 'var(--color-success)' }}>
-                    {labelOf(question.answerIds)}
+                  <dt className="text-muted">{t('result.yourAnswer')}</dt>
+                  <dd
+                    className={cn('mt-0.5 font-semibold')}
+                    style={{ color: `var(--color-${result.correct ? 'success' : 'danger'})` }}
+                  >
+                    {labelOf(result.selectedIds)}
                   </dd>
                 </div>
-              )}
-            </dl>
+                {!result.correct && (
+                  <div>
+                    <dt className="text-muted">{t('result.correctAnswer')}</dt>
+                    <dd className="mt-0.5 font-semibold" style={{ color: 'var(--color-success)' }}>
+                      {labelOf(question.answerIds)}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            ) : (
+              <div className="text-sm">
+                <p className="text-muted">{t('result.yourAnswer')}</p>
+                <p className="mt-1 whitespace-pre-line leading-relaxed">
+                  {question.type === 'speaking'
+                    ? t(result.selectedIds.length ? 'quiz.recorded' : 'result.noAnswer')
+                    : result.selectedIds[0] || t('result.noAnswer')}
+                </p>
+              </div>
+            )}
 
-            <div className="ui-inset mt-3.5 p-3.5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                {t('result.explanation')}
-              </p>
-              <p className="mt-1.5 text-sm leading-relaxed">{p(question.explanation)}</p>
-            </div>
+            {/* ตัวอย่างคำตอบเป็นเฉลย — โผล่ได้เฉพาะที่นี่ ห้ามโผล่ตอนกำลังทำข้อสอบ */}
+            {question.sample && (
+              <div className="ui-inset mt-3.5 p-3.5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                  {t('result.sampleAnswer')}
+                </p>
+                <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed">{p(question.sample)}</p>
+              </div>
+            )}
+
+            {/* บทพูดของข้อการฟัง — ระหว่างทำข้อสอบซ่อนไว้ ที่นี่เปิดให้อ่านได้แล้ว */}
+            {question.audioScript && (
+              <details className="ui-inset mt-3.5 p-3.5">
+                <summary className="ui-focusable cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted">
+                  {t('result.transcript')}
+                </summary>
+                <p className="mt-2 text-sm leading-relaxed">{question.audioScript}</p>
+              </details>
+            )}
+
+            {question.explanation && (
+              <div className="ui-inset mt-3.5 p-3.5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                  {t('result.explanation')}
+                </p>
+                <p className="mt-1.5 text-sm leading-relaxed">{p(question.explanation)}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
