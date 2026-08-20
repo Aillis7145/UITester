@@ -15,8 +15,9 @@ import { cn } from '@/lib/cn';
 const SECTIONS = [
   [
     { icon: 'user', key: 'appbar.profile' },
-    { icon: 'layers', key: 'appbar.myCourses' },
-    { icon: 'trophy', key: 'appbar.certificates' },
+    { icon: 'layers', key: 'appbar.myCourses', page: 'subjects' },
+    { icon: 'clock', key: 'appbar.history', page: 'history' },
+    { icon: 'award', key: 'appbar.certificates', page: 'certificates' },
     { icon: 'bookmark', key: 'appbar.saved' },
   ],
   [
@@ -73,8 +74,9 @@ export function ProfileMenu({ onNavigate }) {
                   role="menuitem"
                   onClick={() => {
                     close();
-                    if (item.icon === 'layers') onNavigate?.('subjects');
-                    if (item.icon === 'trophy') onNavigate?.('results');
+                    // ปลายทางมาจากข้อมูลของรายการ ไม่ใช่จากการเทียบชื่อไอคอน
+                    // เดิมเทียบไอคอนไว้ พอ "ใบประกาศ" มีหน้าจริงแล้วต้องแก้สองที่จึงจะไม่ผิด
+                    if (item.page) onNavigate?.(item.page);
                   }}
                   className={cn(
                     'flex w-full items-center gap-2.5 rounded-ui px-2.5 py-2 text-left text-sm',

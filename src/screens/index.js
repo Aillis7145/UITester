@@ -4,8 +4,13 @@ import { SubjectsScreen } from './SubjectsScreen';
 import { BrowseScreen } from './BrowseScreen';
 import { LessonScreen } from './LessonScreen';
 import { PracticeScreen } from './PracticeScreen';
+import { ExamsScreen } from './ExamsScreen';
+import { ExamStartScreen } from './ExamStartScreen';
 import { QuizScreen } from './QuizScreen';
 import { ResultsScreen } from './ResultsScreen';
+import { CertificatesScreen } from './CertificatesScreen';
+import { HistoryScreen } from './HistoryScreen';
+import { ProgressScreen } from './ProgressScreen';
 
 /**
  * ทะเบียนหน้าจอ — resolve จาก map ไม่ใช่ switch
@@ -17,8 +22,13 @@ export const SCREENS = {
   browse: BrowseScreen,
   lesson: LessonScreen,
   practice: PracticeScreen,
+  exams: ExamsScreen,
+  examstart: ExamStartScreen,
   quiz: QuizScreen,
   results: ResultsScreen,
+  certificates: CertificatesScreen,
+  history: HistoryScreen,
+  progress: ProgressScreen,
 };
 
 export const isPageId = (id) => Object.hasOwn(SCREENS, id);

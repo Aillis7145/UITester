@@ -1,5 +1,7 @@
 import { quiz } from './data.js';
 import { quizBank } from './quizbank.js';
+import { courseExamOf } from './courseExam.js';
+import { EXAM_PROJECT_IDS } from './projects.js';
 import { courseOf, unitOf } from './nodes.js';
 
 /**
@@ -35,12 +37,33 @@ export const practiceSetsOf = (node) => quizBank[bankKeyOf(node)]?.practice;
 
 const PREFIX = 'practice-';
 
+/**
+ * ค่าของ ?set= ที่ระบบรู้จัก — สองชุดนี้คนละข้อสอบกันคนละขนาด
+ *
+ *   unit    แบบทดสอบท้ายบท   เข้าจากหน้าวิดีโอ    ไม่เกิน 20 ข้อ ผูกกับบทที่กำลังดู
+ *   course  แบบทดสอบปลายคอร์ส เข้าจากแท็บแบบทดสอบ 50 ข้อ คลุมทั้งคอร์ส และเป็นที่มาของวุฒิบัตร
+ *
+ * เดิมทั้งสองทางเข้าได้ชุดเดียวกัน ผู้เรียนจึงแยกไม่ออกว่าต่างกันตรงไหน
+ */
+export const UNIT_SET = 'unit';
+export const COURSE_SET = 'course';
+
 /** ค่าที่ใส่ใน `?set=` สำหรับชุดฝึกหนึ่งชุด */
 export const practiceSetId = (skill) => `${PREFIX}${skill}`;
 
 export function quizFor(node, setId) {
+  // ข้อสอบปลายคอร์สมีเฉพาะวิชาที่เปิดสอบวัดระดับจริง
+  // ไม่งั้น ?set=course ที่พิมพ์เองบนคอร์สคณิต ป.1 จะได้ข้อสอบภาษาอังกฤษ 50 ข้อ
+  if (setId === COURSE_SET) {
+    const course = courseOf(node?.id);
+    if (course && EXAM_PROJECT_IDS.includes(course.projectId)) return courseExamOf(course);
+  }
   const bank = quizBank[bankKeyOf(node)];
   if (!bank) return quiz;
   if (setId?.startsWith(PREFIX)) return bank.practice[setId.slice(PREFIX.length)] ?? bank.unitQuiz;
   return bank.unitQuiz;
 }
+
+/** คอร์สนี้มีข้อสอบปลายคอร์สไหม — ใช้ตัดสินว่าจะโชว์ทางเข้าให้หรือไม่ */
+export const courseExamFor = (course) =>
+  course && EXAM_PROJECT_IDS.includes(course.projectId) ? courseExamOf(course) : undefined;

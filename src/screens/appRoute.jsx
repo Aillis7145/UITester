@@ -6,6 +6,7 @@ import {
   rootsOf,
   defaultContentOf,
   defaultPracticeContentOf,
+  defaultExamContentOf,
   ancestorsOf,
   resumeContentOf,
 } from '@/mock/nodes';
@@ -42,7 +43,9 @@ function resolveRoute({ pageId, nodeId, setId }) {
   const project = getProject(node?.projectId) ?? getProject(DEFAULT_PROJECT_ID);
   // ชุดข้อสอบเป็นของ "ตำแหน่ง + ?set" เหมือนกับ node จึงคิดที่นี่ที่เดียว
   // หน้าจอไม่ต้องรู้จัก router และไม่ต้อง import ข้อสอบเองอีก
-  return { project, node: node ?? null, quiz: quizFor(node, setId) };
+  // ส่ง set ต่อด้วย เพราะหน้าเตรียมสอบต้องส่งค่าเดิมไปยังหน้าข้อสอบ
+  // ถ้าไม่ส่ง หน้านั้นจะต้องเดาเอง แล้วเลขบนหน้ากับข้อสอบที่ได้จะไม่ตรงกัน
+  return { project, node: node ?? null, quiz: quizFor(node, setId), set: setId ?? null };
 }
 
 /**
@@ -64,7 +67,7 @@ function normalise(node, pageId) {
     if (node.level === LEVEL_ORDER[0]) return node;
     return ancestorsOf(node.id).find((a) => a.level === LEVEL_ORDER[0]) ?? node;
   }
-  if (pageId === 'lesson' || pageId === 'quiz' || pageId === 'practice') {
+  if (pageId === 'lesson' || pageId === 'quiz' || pageId === 'practice' || pageId === 'examstart') {
     // กล่องว่างจริงๆ จะได้ undefined แล้วตกไปใช้ fallbackNode ต่อ ซึ่งถูกต้องกว่าการโชว์กล่องเปล่า
     return node.level === 'content' ? node : resumeContentOf(node.id);
   }
@@ -74,6 +77,8 @@ function normalise(node, pageId) {
 function fallbackNode(pageId) {
   if (pageId === 'browse') return rootsOf(DEFAULT_PROJECT_ID)[0];
   if (pageId === 'practice') return defaultPracticeContentOf();
+  // ตกไปใช้คอร์สเริ่มต้นไม่ได้ เพราะเป็นวิชาประถมซึ่งไม่ได้อยู่ในกลุ่มที่เปิดสอบ
+  if (pageId === 'examstart') return defaultExamContentOf();
   if (pageId === 'lesson' || pageId === 'quiz') return defaultContentOf(DEFAULT_PROJECT_ID);
   return null;
 }

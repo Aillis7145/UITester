@@ -78,12 +78,17 @@ export function QuizScreen({ onNavigate }) {
         <QuizTimer secondsLeft={left} />
       </header>
 
-      {/* ไม่เปิด showLabel โดยตั้งใจ — แถบนี้วัด "ข้อ 3 จาก 10" ไม่ใช่ความคืบหน้าการเรียน
-          ติดคำว่า "ความคืบหน้า" ให้จะกลายเป็นคำโกหกที่อ่านแล้วสับสนกับแถบในหน้าอื่น */}
+      {/* วัดจาก "จำนวนข้อที่ตอบแล้ว" ไม่ใช่ข้อที่กำลังเปิดอยู่
+          ของเดิมนับตามข้อที่ไถผ่าน กดข้ามไปข้อสุดท้ายโดยไม่ตอบสักข้อแถบก็เต็มแล้ว
+          ซึ่งอ่านว่า "ทำเสร็จแล้ว" ทั้งที่ยังไม่ได้ตอบอะไรเลย
+          ตอนนี้เต็มแถบเมื่อตอบครบทุกข้อจริงเท่านั้น จึงติดคำว่า "ความคืบหน้า" ได้ตรงความหมาย
+          ส่วน "ข้อ N จาก ทั้งหมด" ย้ายไปอยู่ใต้ชื่อชุดข้อสอบบนหัวแล้ว ไม่ได้หายไป */}
       <ProgressBar
-        value={(index + 1) / questions.length}
+        value={answeredCount / questions.length}
+        tone={answeredCount === questions.length ? 'success' : 'primary'}
+        showLabel
+        suffix={`· ${t('quiz.answered', { n: answeredCount, total: questions.length })}`}
         className="mt-3"
-        label={t('quiz.qOf', { n: index + 1, total: questions.length })}
       />
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">

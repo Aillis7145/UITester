@@ -2,6 +2,7 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { useThemeMeta } from '@/theme/ThemeFrame';
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
 import { quizResult, scoreQuiz } from '@/mock/data';
+import { COURSE_SET } from '@/mock/quizzes';
 import { useAppRoute } from './appRoute';
 import { formatClock } from '@/hooks/useCountdown';
 import { TopicBreakdown } from './parts/TopicBreakdown';
@@ -14,12 +15,15 @@ import { ProgressRing } from '@/components/ProgressRing';
 export function ResultsScreen({ onNavigate }) {
   const { t, p } = useI18n();
   const { decor } = useThemeMeta();
-  const { quiz } = useAppRoute();
+  const { quiz, set } = useAppRoute();
   const reduced = usePrefersReducedMotion();
 
   // คำนวณจากคำตอบจริง ไม่ hardcode คะแนน — ตัวเลขทุกจุดในหน้านี้จึงตรงกันเสมอ
   const result = scoreQuiz(quiz);
   const tone = result.passed ? 'success' : 'danger';
+  // วุฒิบัตรออกจากข้อสอบปลายคอร์สเท่านั้น ข้อสอบท้ายบทผ่านแล้วไม่ได้ใบ
+  // ไม่งั้นปุ่มจะโผล่ทุกครั้งที่ทำแบบฝึกหัดผ่าน แล้วคำว่า "วุฒิบัตร" ก็ไม่เหลือความหมาย
+  const earnsCertificate = set === COURSE_SET && result.passed;
 
   return (
     <div className="relative mx-auto max-w-5xl px-4 pt-8 pb-24 sm:px-6 lg:px-8">
@@ -130,6 +134,11 @@ export function ResultsScreen({ onNavigate }) {
 
       {/* ---------- ปุ่มปิดท้าย ---------- */}
       <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+        {earnsCertificate && (
+          <Button icon="award" onClick={() => onNavigate?.('certificates', { node: null, set: null })}>
+            {t('result.viewCertificate')}
+          </Button>
+        )}
         <Button variant="outline" icon="refresh" onClick={() => onNavigate?.('quiz')}>
           {t('result.retry')}
         </Button>

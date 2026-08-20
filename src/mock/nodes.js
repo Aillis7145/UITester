@@ -16,7 +16,7 @@
 // ทำให้ scripts/verify-ui.mjs import ไฟล์นี้ตรงๆ ได้โดยไม่ต้องผ่าน bundler
 // ห้ามเติม alias @/ เข้ามาในไฟล์นี้เด็ดขาด สคริปต์ตรวจจะโหลดไม่ได้ทันที
 import { quiz, lessonDetail } from './data.js';
-import { projects, DEFAULT_PROJECT_ID, LEVEL_ORDER, VIDEO_ONLY_SHEETS } from './projects.js';
+import { projects, DEFAULT_PROJECT_ID, LEVEL_ORDER, VIDEO_ONLY_SHEETS, EXAM_PROJECT_IDS } from './projects.js';
 import { curriculum } from './curriculum.js';
 
 const nodes = [];
@@ -88,8 +88,17 @@ function kindOf(title, sheet) {
  *
  * ค่าแรกคือ 0.4 เสมอ — คอร์สแรกของทุกวิชาจึงมีความคืบหน้าให้เห็น
  * ที่เหลือคละกันเพื่อให้กริดรวมมีทั้งการ์ดที่เพิ่งเริ่ม เกือบจบ และยังไม่แตะ
+ *
+ * *** ช่องที่ 3 เป็น 1 โดยตั้งใจ และย้ายไปช่องอื่นไม่ได้ ***
+ * ช่องนี้ตกบน "คอร์สที่สาม" ของทุกวิชา ซึ่งคือ ENG_B1 ของวิชาภาษาอังกฤษ CEFR
+ * B1 ต้องเรียนครบทุกบทและทำแบบทดสอบท้ายบทครบ เพราะเป็นคอร์สที่ใช้สาธิตวุฒิบัตร
+ * (วุฒิบัตรออกให้เมื่อเรียนครบและทำแบบทดสอบท้ายบทครบเท่านั้น — ดู records.js)
+ * และเป็นคอร์สเดียวที่มีชุดข้อสอบจริงจากไฟล์ Word คะแนนที่ตรวจย้อนกลับได้จึงได้ขึ้นหน้าจอ
+ *
+ * ช่องที่ 4 เป็น 0.08 เพราะตกบน ENG_B2 ซึ่งตั้งใจให้ "ยังไม่ค่อยได้เรียน"
+ * คู่ B1/B2 จึงเป็นตัวอย่างสองขั้วในวิชาเดียวกัน: เรียนจบมีวุฒิบัตร กับ เพิ่งเริ่ม
  */
-const WATCH_SHARE = [0.4, 0.15, 0, 0.62, 0.08, 0];
+const WATCH_SHARE = [0.4, 0.15, 1, 0.08, 0.62, 0];
 
 /** ระดับความยากอ่านจากชื่อแผ่น ไม่ต้องเก็บซ้ำใน curriculum.js */
 function difficultyOf(sheet) {
@@ -246,12 +255,16 @@ function buildCourse(entry, courseIndex, totalInProject, projectIndex) {
   });
 
   /* ---------- รอบสอง: สถานะ ---------- */
-  // ล็อกเฉพาะหน่วยสุดท้ายของสองคอร์สท้ายวิชา คิดจากจำนวนคอร์สจริงไม่ใช่เลขตายตัว
+  // ล็อกเฉพาะหน่วยสุดท้ายของ "คอร์สสุดท้าย" ของวิชา คิดจากจำนวนคอร์สจริงไม่ใช่เลขตายตัว
+  //
+  // เดิมล็อกสองคอร์สท้าย ซึ่งกินคอร์สที่ต้องเรียนจบไปด้วยในวิชาที่มีสี่คอร์ส
+  // (ENG_B1 อยู่อันดับสามจากสี่) คอร์สที่มีบทถูกล็อกจะไม่มีวันถึง 100%
+  // ต่อให้ดูครบทุกชิ้นที่เปิดให้ดูได้แล้วก็ตาม จึงออกวุฒิบัตรให้ไม่ได้เลย
   //
   // ห้ามล็อกทั้งคอร์สเด็ดขาด ต่อให้ดูสมจริงกว่าก็ตาม
   // เพราะคอร์สที่ทุกชิ้นล็อกจะกดเข้าไปแล้วตัน เปิดอะไรไม่ได้เลยสักชิ้น
   // ทุกคอร์สในระบบนี้มีหน่วยอย่างน้อยสองหน่วย การล็อกหน่วยท้ายจึงเหลือทางเดินเสมอ
-  const lockLastUnit = courseIndex >= totalInProject - 2 && entry.units.length > 1;
+  const lockLastUnit = courseIndex === totalInProject - 1 && entry.units.length > 1;
   const lastUnitIndex = entry.units.length - 1;
   const watchCount = Math.round(stream.length * WATCH_SHARE[courseIndex % WATCH_SHARE.length]);
 
@@ -419,6 +432,17 @@ export const progressOf = (nodeId) => {
   return r?.total ? r.watched / r.total : 0;
 };
 
+/**
+ * จำนวนชิ้น "ที่ดูแล้ว" และ "ที่ยังเปิดดูได้" ใต้กล่องนี้ — อ่านจาก ROLLUP ที่วิ่งอยู่แล้ว
+ *
+ * มีไว้ให้หน้าสรุปบวกเป็นจำนวนเต็มได้ตรงๆ
+ * เดิมมีแต่ progressOf ซึ่งเป็นทศนิยม การรวมยอดหลายคอร์สจึงต้องคูณกลับด้วย contentCountOf
+ * แล้วปัดเศษ ซึ่งทำให้ยอดรวมของวิชาไม่ตรงกับผลบวกของคอร์สข้างใต้แบบห่างทีละหนึ่ง
+ * และเป็นความต่างที่เห็นบนหน้าจอแต่หาต้นเหตุยากมาก
+ */
+export const watchedCountOf = (nodeId) => ROLLUP.get(nodeId)?.watched ?? 0;
+export const unlockedCountOf = (nodeId) => ROLLUP.get(nodeId)?.unlocked ?? 0;
+
 /** ใบไม้ซ้ายสุดใต้กล่องนี้ · seen กันวงจรเหมือน ancestorsOf */
 export function firstContentOf(nodeId, seen = new Set()) {
   const n = getNode(nodeId);
@@ -468,6 +492,17 @@ export const defaultPracticeContentOf = () => {
   const course = projects.flatMap((p) => rootsOf(p.id)).find((c) => c.practice?.length);
   return course && resumeContentOf(course.id);
 };
+
+/** คอร์สทั้งหมดที่เปิดสอบ เรียงตามวิชาที่ประกาศไว้ใน EXAM_PROJECT_IDS */
+export const examCourses = () => EXAM_PROJECT_IDS.flatMap((id) => rootsOf(id));
+
+/**
+ * สื่อตั้งต้นของหน้าเตรียมสอบเมื่อไม่มี ?node ติดมา
+ *
+ * ตกไปใช้คอร์สเริ่มต้นเหมือนหน้าอื่นไม่ได้ เพราะคอร์สเริ่มต้นเป็นวิชาประถม
+ * ซึ่งไม่ได้อยู่ในกลุ่มที่เปิดสอบ หน้านั้นในสตูดิโอจะขึ้นวิชาที่กดเข้ามาไม่ได้จริง
+ */
+export const defaultExamContentOf = () => resumeContentOf(examCourses()[0]?.id);
 
 /** สื่อที่ผู้เรียนกำลังค้างอยู่ — เดิมเขียน id ตายไว้ใน data.js แล้วพังทุกครั้งที่ข้อมูลขยับ */
 export const currentLessonId = defaultContentOf(DEFAULT_PROJECT_ID)?.id;

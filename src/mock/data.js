@@ -408,7 +408,13 @@ export function isAnswerCorrect(question, selectedIds = []) {
  * รายชื่อหัวข้อมาจากชุดข้อสอบเองก่อน (quizDef.topics) แล้วค่อยถอยไปใช้ topics กลาง
  * ชุดจริงแยกผลตาม "ทักษะ" ส่วนชุดตัวอย่างเดิมแยกตาม "หัวข้อ" — คนละแกนกัน
  */
-export function scoreQuiz(quizDef = quiz, answers = submittedAnswers) {
+/**
+ * ชุดข้อสอบพกใบคำตอบของตัวเองมาได้ (quizDef.answers)
+ *
+ * submittedAnswers ตัวเดิมผูกกับไอดีของชุดตัวอย่างเท่านั้น ชุดอื่นจึงได้ 0 คะแนนเสมอ
+ * ซึ่งทำให้หน้าผลสอบของข้อสอบจริงไม่มีอะไรให้ประเมินเลย ทั้งแถบคะแนนรายทักษะและสถานะผ่าน/ไม่ผ่าน
+ */
+export function scoreQuiz(quizDef = quiz, answers = quizDef.answers ?? submittedAnswers) {
   const perQuestion = quizDef.questions.map((q) => {
     const graded = Array.isArray(q.answerIds) && q.answerIds.length > 0;
     return {

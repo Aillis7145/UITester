@@ -8,15 +8,45 @@
  * ลำดับในนี้คือลำดับที่ผู้เรียนเดินผ่านจริง ใช้เป็นลำดับปุ่มในสตูดิโอด้วย
  * ใส่ id ได้เฉพาะหน้าที่มีคอมโพเนนต์จริงแล้วเท่านั้น ไม่งั้นสตูดิโอจะมีปุ่มที่กดแล้วเด้งกลับ
  */
-export const PAGE_IDS = ['login', 'subjects', 'browse', 'lesson', 'practice', 'quiz', 'results'];
+export const PAGE_IDS = [
+  'login',
+  'subjects',
+  'progress',
+  'history',
+  'browse',
+  'lesson',
+  'practice',
+  'exams',
+  'examstart',
+  'quiz',
+  'results',
+  'certificates',
+];
 
 /**
  * เมนูใน "ตัวแอป" — เลือกจากมุมของผู้เรียน ไม่ใช่ส่วนเติมเต็มของเซตทางเทคนิค
  *
  * ไม่ใส่ browse กับ practice เพราะทั้งคู่ต้องมี ?node ถึงจะมีความหมาย
  * ปุ่มเมนูที่กดแล้วต้องเดาเองว่าจะพาไปไหนไม่ใช่เมนู
+ *
+ * history กับ certificates เข้าเงื่อนไขนี้ — ทั้งคู่เป็นของ "ผู้เรียนคนนี้" ทั้งบัญชี
+ * ไม่ผูกกับตำแหน่งในต้นไม้ จึงเปิดจากที่ไหนก็ได้ความหมายเดียวกันเสมอ
  */
-export const APP_NAV_IDS = ['subjects', 'lesson', 'quiz', 'results'];
+/**
+ * *** แท็บ "แบบทดสอบ" ชี้ไป exams ไม่ใช่ quiz ***
+ * กดแท็บแล้วเข้าห้องสอบทันทีคือการเริ่มสอบโดยที่ผู้เข้าสอบยังไม่รู้ด้วยซ้ำว่าสอบวิชาอะไร
+ * ทางเดินคือ เลือกวิชา → เตรียมพร้อม (ตรวจเสียง) → ข้อสอบ
+ * ส่วน quiz กับ examstart ยังอยู่ใน PAGE_IDS เพื่อให้สตูดิโอเปิดดูตรงๆ ได้
+ */
+export const APP_NAV_IDS = [
+  'subjects',
+  'progress',
+  'history',
+  'lesson',
+  'exams',
+  'results',
+  'certificates',
+];
 
 /** หน้าที่ไม่มีแถบบนเลย — ยังไม่ได้เข้าระบบ จึงยังไม่มีอะไรให้ไป */
 export const CHROMELESS_PAGES = ['login'];
@@ -28,6 +58,11 @@ export const PAGE_ICONS = {
   browse: 'list',
   lesson: 'play',
   practice: 'list',
+  exams: 'clipboard',
+  examstart: 'headphones',
   quiz: 'flag',
   results: 'trophy',
+  certificates: 'award',
+  history: 'clock',
+  progress: 'chart',
 };

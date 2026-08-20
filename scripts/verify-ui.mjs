@@ -117,7 +117,8 @@ check(
 );
 await appNav.locator('button', { hasText: 'แบบทดสอบ' }).click();
 await page.waitForTimeout(400);
-check('app bar navigates', pathOf() === '/showcase/tech/quiz');
+// แท็บ "แบบทดสอบ" พาไปหน้าเลือกวิชาสอบ ไม่ใช่เข้าห้องสอบทันที
+check('app bar navigates', pathOf() === '/showcase/tech/exams');
 await page.goto(`${BASE}/showcase/tech/login`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(400);
 check('app bar hidden on login', (await page.locator('[data-theme] header nav').count()) === 0);
@@ -213,7 +214,18 @@ for (const theme of THEMES) {
 const { projects, purchasedProjects, LEVEL_ORDER } = await import('../src/mock/projects.js');
 const { curriculum } = await import('../src/mock/curriculum.js');
 const nodesApi = await import('../src/mock/nodes.js');
-const { rootsOf, childrenOf, contentCountOf, getNode, unitLevelOf, continueLearning, resumeContentOf } = nodesApi;
+const {
+  rootsOf,
+  childrenOf,
+  contentCountOf,
+  getNode,
+  unitLevelOf,
+  continueLearning,
+  resumeContentOf,
+  progressOf,
+  watchedCountOf,
+  unlockedCountOf,
+} = nodesApi;
 
 // ทุกวิชาต้องมีชั้นหน่วยจริง ไม่งั้น flow 2 คลิกเป็นไปไม่ได้
 check(
@@ -304,6 +316,89 @@ check(
   'fixture has courses both with and without practice sets',
   built.some((c) => c.practice?.length) && built.some((c) => !c.practice?.length),
 );
+
+// ---------- ประวัติการเรียนต้องชี้ไปของที่มีจริงและ "ดูแล้ว" จริง ----------
+// ประวัติที่ชี้ไปสื่อที่ไม่มีคือแถวที่กดแล้วไม่ไปไหน ซึ่งเป็นบั๊กที่ผู้ใช้เจอก่อนเราเสมอ
+const {
+  history,
+  historyByDay,
+  certificates,
+  certificateOf,
+  dayAt,
+  TODAY_UTC,
+  unitAttempts,
+  attemptsOf,
+  latestAttemptOf,
+} =
+  await import('../src/mock/records.js');
+
+check(`learning history has entries (${history.length})`, history.length >= 20);
+check(
+  'every history entry points at a real piece of content',
+  history.every((r) => getNode(r.nodeId)?.level === 'content'),
+);
+check(
+  'history only lists things the learner actually watched',
+  history.filter((r) => r.action === 'watch').every((r) => getNode(r.nodeId).watched),
+);
+check('history entry ids are unique', new Set(history.map((r) => r.id)).size === history.length);
+check(
+  'history is ordered newest first',
+  history.every(
+    (r, i) =>
+      i === 0 ||
+      r.dayOffset > history[i - 1].dayOffset ||
+      (r.dayOffset === history[i - 1].dayOffset && r.minuteOfDay <= history[i - 1].minuteOfDay),
+  ),
+);
+const days = historyByDay();
+check(
+  `history spans several days (${days.map((d) => d.dayOffset).join(', ')})`,
+  days.length >= 4 && days.every((d) => d.items.length > 0),
+);
+// ต้องคละวิชา ไม่งั้นหน้าประวัติพิสูจน์ไม่ได้ว่ารองรับเว็บที่รวมหลายวิชา
+check(
+  `history covers more than one subject (${new Set(history.map((r) => getNode(r.nodeId).projectId)).size})`,
+  new Set(history.map((r) => getNode(r.nodeId).projectId)).size >= 3,
+);
+// เวลาต้องคงที่ ไม่ใช่อ่านนาฬิกาจริง ไม่งั้นภาพถ่ายหน้าจอเปลี่ยนเองทุกวัน
+check('the history clock is a fixed anchor, not the real one', TODAY_UTC === Date.UTC(2026, 7, 20));
+check('day 0 resolves to the anchor date', dayAt(0).getTime() === TODAY_UTC);
+
+// ---------- ใบประกาศต้องออกให้คอร์สที่เรียนไปจริงเท่านั้น ----------
+check(`certificates were issued (${certificates.length})`, certificates.length >= 3);
+check(
+  'every certificate belongs to a real course',
+  certificates.every((c) => getNode(c.courseId)?.level === 'course'),
+);
+// วุฒิบัตรออกให้เมื่อ "เรียนครบทุกบท" เท่านั้น ไม่ใช่แค่คืบหน้ามากที่สุดของวิชา
+check(
+  'every certified course is finished to the last item',
+  certificates.length > 0 && certificates.every((c) => progressOf(c.courseId) === 1),
+);
+// และเพราะคะแนนท้ายบทมีเฉพาะบทที่จบ "เรียนครบ" จึงพ่วง "ทำแบบทดสอบท้ายบทครบ" มาด้วยเสมอ
+check(
+  'a certified course has an attempt on every one of its units',
+  certificates.every((c) => childrenOf(c.courseId).every((u) => attemptsOf(u.id).length > 0)),
+);
+// และกลับกัน: คอร์สที่เรียนครบทุกใบต้องได้ใบ ไม่ใช่บางใบ
+check(
+  `every finished course earns a certificate (${certificates.length})`,
+  projects
+    .flatMap((pr) => rootsOf(pr.id))
+    .filter((c) => progressOf(c.id) === 1)
+    .every((c) => Boolean(certificateOf(c.id))),
+);
+check(
+  'every certificate carries a passing score',
+  certificates.every((c) => c.score > 0 && c.score <= c.total && c.percent >= 0.5),
+);
+check(
+  'credential ids are unique and carry the sheet name',
+  new Set(certificates.map((c) => c.credentialId)).size === certificates.length &&
+    certificates.every((c) => c.credentialId.includes(getNode(c.courseId).sheet)),
+);
+check('certificates are ordered newest first', certificates.every((c, i) => i === 0 || c.dayOffset >= certificates[i - 1].dayOffset));
 
 // ---------- คอร์สที่ประกาศว่าเป็นวิดีโอล้วน ต้องเป็นวิดีโอล้วนจริง ----------
 // ชื่อหัวข้อของ B1/B2 อ่านเหมือนเอกสารเยอะมาก ("คำศัพท์ (Vocabulary Focus)", "บทนำ")
@@ -438,6 +533,195 @@ check('unit quiz resolves from ?set=unit', quizFor(b1First, 'unit') === bank.uni
 check('practice set resolves from ?set=practice-grammar', quizFor(b1First, 'practice-grammar') === bank.practice.grammar);
 check('courses without a bank still get the demo quiz', quizFor(otherFirst, 'unit') === demoQuiz);
 check('practice sets are only offered where a bank exists', Boolean(practiceSetsOf(b1First)) && !practiceSetsOf(otherFirst));
+
+// ---------- วิชาที่เปิดสอบต้องเป็นชุดที่ประกาศไว้ ไม่ใช่ทั้ง 38 คอร์ส ----------
+const { EXAM_PROJECT_IDS } = await import('../src/mock/projects.js');
+const { examCourses, defaultExamContentOf } = nodesApi;
+
+const openExams = examCourses();
+check(
+  `exams are offered for ${openExams.length} courses (${openExams.map((c) => c.sheet).join(', ')})`,
+  openExams.length > 0,
+);
+check(
+  'every exam course belongs to a subject that declares exams',
+  openExams.every((c) => EXAM_PROJECT_IDS.includes(c.projectId)),
+);
+// ถ้าทุกคอร์สเปิดสอบหมด หน้าเลือกวิชาก็ไม่ได้กรองอะไรเลย เช็คข้างบนจะไร้ความหมาย
+check(
+  `most courses have no standalone exam (${openExams.length} of ${projects.flatMap((pr) => rootsOf(pr.id)).length})`,
+  openExams.length < projects.flatMap((pr) => rootsOf(pr.id)).length / 2,
+);
+// หน้าเตรียมสอบต้องเรนเดอร์ได้ลำพัง และต้องตกไปที่วิชาที่เปิดสอบจริง ไม่ใช่วิชาประถม
+const examFallback = defaultExamContentOf();
+check(
+  `the exam pages stand alone without ?node (${examFallback?.id})`,
+  Boolean(examFallback) && EXAM_PROJECT_IDS.includes(examFallback.projectId),
+);
+// การ์ดบอกจำนวนข้อจากชุดจริง ไม่ใช่ตัวเลขที่พิมพ์ไว้ — สองที่นี้ต้องตรงกันเสมอ
+check(
+  'every exam course resolves to a real question set',
+  openExams.every((c) => {
+    const set = quizFor(resumeContentOf(c.id), 'unit');
+    return set?.questions?.length > 0 && set.timeLimitSec > 0 && set.passMark > 0;
+  }),
+);
+
+// ---------- ข้อสอบสองชุดต้องเป็นคนละชุดกันจริง ----------
+// ท้ายบท (เข้าจากหน้าวิดีโอ) กับ ปลายคอร์ส (เข้าจากแท็บแบบทดสอบ) เคยเป็นชุดเดียวกัน
+// ถ้ามันกลับมาเหมือนกันเมื่อไร ผู้เรียนจะแยกไม่ออกอีกว่าสองทางเข้านี้ต่างกันตรงไหน
+const { courseExamOf, COURSE_EXAM_TOTAL } = await import('../src/mock/courseExam.js');
+const { UNIT_SET, COURSE_SET, courseExamFor, bankKeyOf } = await import('../src/mock/quizzes.js');
+const { scoreQuiz } = await import('../src/mock/data.js');
+
+const examCoursesForSets = openExams;
+check(
+  `every open exam has a ${COURSE_EXAM_TOTAL}-question course exam`,
+  examCoursesForSets.every((c) => courseExamOf(c)?.questions.length === COURSE_EXAM_TOTAL),
+);
+// ข้อสอบ HSK ต้องเป็นภาษาจีน ต่อให้เป็นข้อสอบจำลองก็ตาม
+const hasHan = (q) => /[\u4e00-\u9fff]/.test(q.prompt.th);
+check(
+  'the Chinese courses get Chinese questions and the CEFR courses get English ones',
+  examCoursesForSets
+    .filter((c) => c.projectId === 'zh')
+    .every((c) => courseExamOf(c).questions.filter(hasHan).length > 30) &&
+    examCoursesForSets
+      .filter((c) => c.projectId === 'eng')
+      .every((c) => courseExamOf(c).questions.filter(hasHan).length === 0),
+);
+const anyExam = courseExamOf(examCoursesForSets[0]);
+check(
+  `the course exam runs longer than a unit quiz (${anyExam.timeLimitSec / 60} min)`,
+  anyExam.timeLimitSec >= 60 * 60,
+);
+check(
+  'every multiple-choice item in the course exam has one answer among four choices',
+  anyExam.questions
+    .filter((q) => q.type === 'single')
+    .every((q) => q.choices.length === 4 && q.answerIds?.length === 1 && q.choices.some((c) => c.id === q.answerIds[0])),
+);
+check(
+  `written and spoken items stay out of the marking (${anyExam.questions.filter((q) => !q.answerIds).length} items)`,
+  anyExam.questions.filter((q) => !q.answerIds).every((q) => q.guidelines?.length > 0 && q.sample?.th),
+);
+check('course exam ids are unique', new Set(anyExam.questions.map((q) => q.id)).size === anyExam.questions.length);
+// ใบคำตอบจำลองต้องพาให้ผ่าน ไม่งั้นปุ่มดูวุฒิบัตรบนหน้าผลสอบไม่มีทางโผล่ให้ใครเห็น
+const examScore = scoreQuiz(anyExam);
+check(
+  `the mock answer sheet passes the course exam (${examScore.score}/${examScore.total})`,
+  examScore.passed && examScore.score < examScore.total,
+);
+
+// ---------- ทางเข้าสองทางต้องได้คนละชุด ----------
+const unitSet = quizFor(b1First, UNIT_SET);
+const courseSet = quizFor(b1First, COURSE_SET);
+check(
+  `the two entry points give different sets (${unitSet.questions.length} vs ${courseSet.questions.length})`,
+  unitSet !== courseSet && unitSet.questions.length <= 20 && courseSet.questions.length === COURSE_EXAM_TOTAL,
+);
+check('the unit quiz is still the one converted from the Word files', unitSet === quizBank['ENG_B1#1'].unitQuiz);
+// ?set=course ที่พิมพ์เองบนคอร์สประถมต้องไม่ได้ข้อสอบภาษาอังกฤษ 50 ข้อ
+check(
+  'courses without an exam never hand out the course exam',
+  quizFor(otherFirst, COURSE_SET).questions.length !== COURSE_EXAM_TOTAL && !courseExamFor(nodesApi.courseOf(otherFirst.id)),
+);
+// วุฒิบัตรต้องอ้างคะแนนเต็มของข้อสอบที่ออกใบให้ ไม่ใช่เลขที่ตั้งไว้เอง
+check(
+  `certificates are scored out of the course exam total (${certificates[0]?.total})`,
+  certificates.every((c) => c.total === COURSE_EXAM_TOTAL),
+);
+
+// ---------- คะแนนท้ายบท: ทุกรอบ ไม่ใช่รอบล่าสุดรอบเดียว ----------
+// แบบทดสอบท้ายบททำซ้ำได้ เก็บแค่รอบล่าสุดจะทิ้งสิ่งที่ผู้เรียนอยากเห็นที่สุดไป
+const allCoursesEverywhere = projects.flatMap((pr) => rootsOf(pr.id));
+const allUnitsEverywhere = allCoursesEverywhere.flatMap((c) => childrenOf(c.id));
+const finishedUnitsAll = allUnitsEverywhere.filter((u) => progressOf(u.id) === 1);
+
+check(`unit quiz attempts were recorded (${unitAttempts.length})`, unitAttempts.length >= 100);
+// ข้อกำหนดตรงๆ ของหน้านี้ — คะแนนท้ายบทมีได้เฉพาะบทที่เรียนจบแล้ว
+check(
+  'a score is only claimed for a unit the learner finished',
+  unitAttempts.every((a) => progressOf(a.unitId) === 1),
+);
+check(
+  `every finished unit has at least one attempt (${finishedUnitsAll.length} units)`,
+  finishedUnitsAll.length > 0 && finishedUnitsAll.every((u) => attemptsOf(u.id).length > 0),
+);
+// รอบต้องเรียง 1..n และเดินหน้าเข้าหาปัจจุบัน — จับข้อมูลที่ "รอบสองทำก่อนรอบแรก"
+check(
+  'retakes are numbered 1..n and move forward in time',
+  finishedUnitsAll.every((u) =>
+    attemptsOf(u.id).every((a, i, list) => a.round === i + 1 && (i === 0 || a.dayOffset <= list[i - 1].dayOffset)),
+  ),
+);
+check('no score exceeds its own total', unitAttempts.every((a) => a.total > 0 && a.score >= 0 && a.score <= a.total));
+// ตัวหารต้องอ่านจากข้อสอบจริง ไม่ใช่เลขที่พิมพ์ไว้ — quizbank โตขึ้นเมื่อไรต้องขยับตามเอง
+check(
+  'the quiz total is read from the real quiz, not typed in',
+  unitAttempts.every((a) => a.total === scoreQuiz(quizFor(getNode(a.unitId), UNIT_SET)).total),
+);
+check(
+  `only ENG_B1 unit 1 claims a real question bank (${[...new Set(unitAttempts.filter((a) => a.real).map((a) => bankKeyOf(getNode(a.unitId))))].join(', ')})`,
+  [...new Set(unitAttempts.filter((a) => a.real).map((a) => bankKeyOf(getNode(a.unitId))))].join(',') === 'ENG_B1#1',
+);
+// ความสอดคล้องข้ามหน้า: หน้าใบประกาศกับหน้าความคืบหน้าต้องไม่เถียงกันเอง
+check(
+  'a certified course has no unit still failing on its latest attempt',
+  certificates.every((c) => childrenOf(c.courseId).every((u) => latestAttemptOf(u.id)?.passed ?? true)),
+);
+// ถ้าไม่มีบทไหนที่รอบแรกตกแล้วรอบหลังผ่าน การแสดงหลายรอบก็ไม่มีอะไรให้ดู
+const improvedUnits = finishedUnitsAll.filter((u) => {
+  const list = attemptsOf(u.id);
+  return list.length > 1 && !list[0].passed && list[list.length - 1].passed;
+});
+check(`some units were retaken and improved (${improvedUnits.length})`, improvedUnits.length > 0);
+
+// ---------- B1 กับ B2 เป็นคู่สาธิตสองขั้วในวิชาเดียวกัน ----------
+// B1 เรียนครบทุกบท ทำแบบทดสอบท้ายบทครบ และได้วุฒิบัตร · B2 เพิ่งเริ่ม
+// ถ้าสองอย่างนี้กลับด้านหรือเท่ากันเมื่อไร หน้าความคืบหน้าก็ไม่เหลือตัวอย่างที่ต่างกันให้ดู
+const b1Course = projects.flatMap((pr) => rootsOf(pr.id)).find((c) => c.sheet === 'ENG_B1');
+const b2Course = projects.flatMap((pr) => rootsOf(pr.id)).find((c) => c.sheet === 'ENG_B2');
+check(
+  `B1 is finished to the last unit (${Math.round(progressOf(b1Course.id) * 100)}%)`,
+  progressOf(b1Course.id) === 1 && childrenOf(b1Course.id).every((u) => progressOf(u.id) === 1),
+);
+check(
+  `B1 has an attempt on every unit and holds the certificate (${childrenOf(b1Course.id).length} units)`,
+  childrenOf(b1Course.id).every((u) => attemptsOf(u.id).length > 0) && Boolean(certificateOf(b1Course.id)),
+);
+check(
+  `B2 has barely been started (${Math.round(progressOf(b2Course.id) * 100)}%)`,
+  progressOf(b2Course.id) > 0 && progressOf(b2Course.id) < 0.2 && !certificateOf(b2Course.id),
+);
+
+// ---------- ธง "เรียนจบแล้ว" ต้องเป็นจริงกับคอร์สอย่างน้อยสองสามใบ ----------
+const finishedCourses = allCoursesEverywhere.filter((c) => progressOf(c.id) === 1);
+check(`at least one course is genuinely finished (${finishedCourses.length})`, finishedCourses.length >= 3);
+check(
+  'the overview keeps all three course states',
+  allCoursesEverywhere.some((c) => progressOf(c.id) === 0) &&
+    allCoursesEverywhere.some((c) => progressOf(c.id) > 0 && progressOf(c.id) < 1) &&
+    finishedCourses.length > 0,
+);
+// คอร์สที่ดูครบทุกชิ้นที่ปลดล็อกแล้วแต่ยังมีบทล็อกอยู่ ต้องอ่านว่า "ยังไม่จบ" ไม่ใช่ 100%
+check(
+  'a course finished except for its locked units still reads under 100%',
+  allCoursesEverywhere.some(
+    (c) => progressOf(c.id) < 1 && watchedCountOf(c.id) > 0 && watchedCountOf(c.id) === unlockedCountOf(c.id),
+  ),
+);
+// สรุประดับวิชาต้องเท่ากับผลบวกระดับบทเป๊ะ — จับ "สรุปเถียงกับรายละเอียด" ตั้งแต่ชั้นข้อมูล
+check(
+  'every subject total equals the sum of its units',
+  projects.every((pr) => {
+    const cs = rootsOf(pr.id);
+    return (
+      cs.reduce((n, c) => n + watchedCountOf(c.id), 0) ===
+      cs.flatMap((c) => childrenOf(c.id)).reduce((n, u) => n + watchedCountOf(u.id), 0)
+    );
+  }),
+);
 
 // ---------- ปกต้องไม่ซ้ำ "แม้แต่คู่เดียว" ในทั้งระบบ ----------
 // รูปคือสิ่งแรกที่ตากวาดเจอบนการ์ด ก่อนชื่อและก่อนแท็ก
@@ -583,7 +867,7 @@ check(
 );
 
 // ---------- ทุกแถบความคืบหน้าต้องอ่านออกทั้งด้วยตาและด้วย screen reader ----------
-for (const pageId of ['subjects', 'browse', 'lesson']) {
+for (const pageId of ['subjects', 'browse', 'lesson', 'quiz']) {
   await page.goto(`${BASE}/showcase/tech/${pageId}`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(500);
   const bars = await page.evaluate(() => {
@@ -605,6 +889,424 @@ for (const pageId of ['subjects', 'browse', 'lesson']) {
     bars.every((b) => b.text.includes('ความคืบหน้า') && /\d+%/.test(b.text)),
   );
 }
+
+// ---------- หน้าความคืบหน้า: ทุกอย่างต้องอยู่บนหน้าโดยไม่ต้องกด ----------
+await page.goto(`${BASE}/showcase/tech/progress`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(1200);
+
+const startedCourses = allCoursesEverywhere.filter((c) => progressOf(c.id) > 0);
+const expectedCells = startedCourses.reduce((n, c) => n + childrenOf(c.id).length, 0);
+check(
+  `the progress page lists every purchased subject (${await page.locator('[data-progress-subject]').count()})`,
+  (await page.locator('[data-progress-subject]').count()) === purchasedProjects.length,
+);
+check(
+  `…every course (${await page.locator('[data-progress-course]').count()})`,
+  (await page.locator('[data-progress-course]').count()) === allCoursesEverywhere.length,
+);
+check(
+  `…and a cell for every unit of a started course (${await page.locator('[data-progress-unit]').count()})`,
+  (await page.locator('[data-progress-unit]').count()) === expectedCells,
+);
+// คอร์สที่ยังไม่เริ่มต้องไม่วาดเซลล์เทายาว — นั่นคือกลไกกัน "กำแพงศูนย์"
+check(
+  'an untouched course draws no unit cells',
+  (await page.locator('[data-progress-state="none"]').first().locator('[data-progress-unit]').count()) === 0,
+);
+
+// *** ข้อกำหนดของหน้านี้: ไม่ต้องกดหลายครั้ง ***
+check('nothing on the page is hidden behind a disclosure', (await page.locator('[data-theme] details').count()) === 0);
+// การ์ดใส่ได้สามรอบ ที่เหลืออยู่ใน popup — แต่ "สามรอบล่าสุด" ต้องอยู่บนการ์ดเสมอ
+const manyRounds = finishedUnitsAll.find((u) => attemptsOf(u.id).length > 3);
+const manyCell = page.locator(`[data-progress-unit="${manyRounds.id}"]`);
+const manyText = await manyCell.innerText();
+const allRounds = attemptsOf(manyRounds.id);
+check(
+  `the card shows the last 3 rounds of ${manyRounds.id} (${allRounds.length} in total)`,
+  allRounds.slice(-3).every((a) => manyText.includes(`${Math.round(a.percent * 100)}%`)) &&
+    (await manyCell.getAttribute('data-progress-rounds')) === String(allRounds.length),
+);
+// และต้องบอกว่ายังมีรอบที่มองไม่เห็น ไม่ใช่ตัดทิ้งเงียบๆ
+check(
+  'the card says how many earlier rounds it could not fit',
+  manyText.includes(String(allRounds.length - 3)),
+);
+check(
+  'the cell spells out its unit and every round for a screen reader',
+  await manyCell
+    .getAttribute('aria-label')
+    .then((l) => /\d+ รอบ/.test(l) && (l.match(/\d+\/\d+/g) ?? []).length === allRounds.length),
+);
+
+// ป้ายใบประกาศเป็นสถานะ ไม่ใช่ตัวนับ
+const certMarks = await page.locator('[data-progress-cert]').evaluateAll((els) => els.map((e) => e.dataset.progressCert));
+check(
+  `the certificate mark is a yes/no state, not a tally (${certMarks.filter((m) => m === 'yes').length} yes)`,
+  certMarks.length === purchasedProjects.length && certMarks.every((m) => m === 'yes' || m === 'no'),
+);
+check(
+  'no subject header counts certificates',
+  !/\d+\s*ใบ/.test((await page.locator('[data-progress-subject] h2').first().locator('..').innerText()) ?? ''),
+);
+
+// สรุประดับวิชาต้องตรงกับแถวคอร์สข้างใต้ — จับหน้าที่โกหกเงียบๆ ข้ามเส้นข้อมูล↔DOM
+const headerVsRows = await page.evaluate(() =>
+  [...document.querySelectorAll('[data-progress-subject]')].map((sec) => ({
+    id: sec.dataset.progressSubject,
+    pct: Number(sec.querySelector('[data-progress-subject-pct]').dataset.progressSubjectPct),
+    done: sec.querySelectorAll('[data-progress-done="true"]').length,
+  })),
+);
+check(
+  'every subject header agrees with the course rows under it',
+  headerVsRows.every((row) => {
+    const cs = rootsOf(row.id);
+    const watched = cs.reduce((n, c) => n + watchedCountOf(c.id), 0);
+    const total = cs.reduce((n, c) => n + contentCountOf(c.id), 0);
+    return (
+      row.pct === Math.round((total ? watched / total : 0) * 100) &&
+      row.done === cs.filter((c) => progressOf(c.id) === 1).length
+    );
+  }),
+);
+
+// ต้องใช้คำเรียกหน่วยของแต่ละวิชาเอง ไม่ใช่พิมพ์คำว่า "บท" ตายไว้
+const unitWords = new Set(projects.map((pr) => pr.levels[1].plural.th));
+const shownWords = await page.locator('[data-progress-course] p, [data-progress-course] span').allInnerTexts();
+check(
+  `the page uses each subject's own word for a unit (${[...unitWords].join(', ')})`,
+  [...unitWords].filter((w) => shownWords.some((s) => s.includes(w))).length >= 3,
+);
+
+// กดเซลล์ที่มีคะแนน → popup ที่โชว์ "ทุกรอบ" ซึ่งการ์ดใส่ไม่ไหว
+await manyCell.click();
+await page.waitForTimeout(600);
+const attemptsDialog = page.getByRole('dialog');
+check('clicking a scored unit opens the full attempt list', await attemptsDialog.isVisible());
+check(
+  `the popup lists every round (${allRounds.length})`,
+  (await attemptsDialog.locator('ol li').count()) === allRounds.length,
+);
+const dialogText = await attemptsDialog.innerText();
+check(
+  'the popup gives a date and a score for every round',
+  allRounds.every((a) => dialogText.includes(`${a.score}/${a.total}`)),
+);
+// ปุ่มไปหน้าข้อสอบย้ายมาอยู่ท้าย popup แทนการเด้งทันทีที่กดการ์ด
+await attemptsDialog.getByRole('button', { name: /ไปที่แบบทดสอบท้ายบท/ }).click();
+await page.waitForTimeout(700);
+check(
+  'the popup can still take you to that unit’s end-of-unit quiz',
+  pathOf() === '/showcase/tech/quiz' && page.url().includes(`node=${manyRounds.id}`) && page.url().includes('set=unit'),
+);
+await page.goto(`${BASE}/showcase/tech/progress`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(900);
+
+// ---------- ชิปกรองหลักสูตร เหมือนหน้าคอร์ส ----------
+const progressChips = page.locator('[data-theme] button[aria-pressed]');
+check(
+  `the progress page offers a chip per subject plus "all" (${await progressChips.count()})`,
+  (await progressChips.count()) === purchasedProjects.length + 1,
+);
+// verify ไม่มี p() ให้ใช้ — หน้าเว็บเป็นภาษาไทยโดยปริยาย จึงอ่าน short.th ตรงๆ
+await progressChips.filter({ hasText: purchasedProjects[5].short.th }).click();
+await page.waitForTimeout(600);
+check(
+  `picking a chip narrows the page to that subject (${await page.locator('[data-progress-subject]').count()})`,
+  (await page.locator('[data-progress-subject]').count()) === 1 &&
+    (await page.locator('[data-progress-subject]').first().getAttribute('data-progress-subject')) ===
+      purchasedProjects[5].id,
+);
+// ยอดรวมด้านบนต้องไม่ขยับตามตัวกรอง — ตัวเลขที่ขยับตามชิปไม่ใช่ยอดรวม
+const totalAfterFilter = await page.locator('[data-theme] section li p').first().innerText();
+check(
+  `the overall totals ignore the chip filter (${totalAfterFilter.trim()})`,
+  totalAfterFilter.includes(String(projects.flatMap((pr) => rootsOf(pr.id)).length)),
+);
+await progressChips.first().click();
+await page.waitForTimeout(500);
+
+// ---------- สีของเซลล์ต้องหมายถึงผ่าน/ไม่ผ่านที่ 60% ไม่ใช่สามระดับ ----------
+// เดิมมีสีเหลืองคั่นช่วง 60–79 ซึ่งกินพื้นที่เกือบครึ่งจอและอ่านเหมือน "เกือบตก"
+// ทั้งที่ 60% คือผ่านเต็มตัวตามเกณฑ์ของข้อสอบ
+const cellTones = await page.evaluate(() =>
+  [...document.querySelectorAll('[data-progress-unit]')]
+    .filter((c) => c.style.background)
+    .map((c) => ({ id: c.dataset.progressUnit, bg: c.style.background })),
+);
+check(
+  `tinted cells use only two tones (${[...new Set(cellTones.map((c) => c.bg.match(/--color-(\w+)/)[1]))].join(', ')})`,
+  new Set(cellTones.map((c) => c.bg.match(/--color-(\w+)/)[1])).size === 2,
+);
+check(
+  'a cell is green exactly when its latest round scored 60% or more',
+  cellTones.every((c) => {
+    const last = latestAttemptOf(c.id);
+    return c.bg.includes(last.percent >= 0.6 ? '--color-success' : '--color-danger');
+  }),
+);
+
+// ---------- ตัวเลขในเซลล์สีต้องอ่านออกทุกธีม ----------
+// เซลล์ทาสีด้วย color-mix โปร่งแสง ซึ่งในธีมมืด "ยกความสว่างของพื้น" ขึ้นมาหาตัวหนังสือ
+// จึงต้องวัดสีที่ผสมเสร็จแล้วจริงๆ ไม่ใช่ดูด้วยตาบนธีมเดียว
+for (const theme of THEMES) {
+  await page.goto(`${BASE}/showcase/${theme}/progress`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(900);
+  const worst = await page.evaluate(() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 1;
+    const cx = c.getContext('2d', { willReadFrequently: true });
+    // ให้ canvas ผสมสีโปร่งแสงให้เอง — การหารกลับด้วย alpha บานปลายเมื่อ alpha ต่ำ
+    const flatten = (layers) => {
+      cx.clearRect(0, 0, 1, 1);
+      for (const l of layers) {
+        cx.fillStyle = l;
+        cx.fillRect(0, 0, 1, 1);
+      }
+      const d = cx.getImageData(0, 0, 1, 1).data;
+      return [d[0], d[1], d[2]];
+    };
+    const lum = ([r, g, b]) => {
+      const f = (v) => {
+        const x = v / 255;
+        return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+      };
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+    };
+    const ratio = (a, b) => {
+      const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    const host = document.querySelector('[data-theme]');
+    let min = 99;
+    for (const cell of document.querySelectorAll('[data-progress-unit]')) {
+      if (!cell.style.background) continue; // เฉพาะเซลล์ที่ติดสีโทนเอง
+      const chain = [];
+      let n = cell;
+      while (n && n !== host.parentElement) {
+        const bg = getComputedStyle(n).backgroundColor;
+        if (!bg.includes(', 0)')) chain.unshift(bg);
+        n = n.parentElement;
+      }
+      const bg = flatten([getComputedStyle(host).getPropertyValue('--color-bg'), ...chain]);
+      for (const span of cell.querySelectorAll('span')) {
+        if (!span.textContent.trim() || span.children.length) continue;
+        min = Math.min(min, ratio(flatten(['#000', getComputedStyle(span).color]), bg));
+      }
+    }
+    return min;
+  });
+  check(`${theme}: numbers on a tinted progress cell stay readable (${worst.toFixed(2)}:1 ≥ 4.5)`, worst >= 4.5);
+}
+
+// ---------- แถบความคืบหน้าในหน้าข้อสอบต้องนับ "ข้อที่ตอบแล้ว" ไม่ใช่ข้อที่เปิดอยู่ ----------
+// ของเดิมนับตามข้อที่ไถผ่าน กดข้ามไปข้อสุดท้ายโดยไม่ตอบสักข้อแถบก็เต็ม
+// ซึ่งอ่านว่า "ทำเสร็จแล้ว" ทั้งที่ยังไม่ได้ตอบอะไรเลย
+await page.goto(`${BASE}/showcase/tech/quiz?node=${b1First.id}&set=unit`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(800);
+
+const barWidth = () =>
+  page.locator('[data-theme] [role="progressbar"] > div').first().evaluate((el) => el.style.width);
+const quizBarText = () =>
+  page.locator('[data-theme] p').filter({ hasText: 'ความคืบหน้า' }).first().innerText();
+const navItem = (n) => page.locator('[data-theme] nav ol li button').nth(n);
+const pickChoice = async () => {
+  const choice = page.locator('[data-theme] [role="radio"], [data-theme] [aria-checked]').first();
+  if (!(await choice.count())) return false;
+  await choice.click();
+  await page.waitForTimeout(200);
+  return true;
+};
+
+check(`the quiz progress bar starts empty (${await barWidth()})`, (await barWidth()) === '0%');
+check('the empty bar still says "ความคืบหน้า" and a % figure', /ความคืบหน้า/.test(await quizBarText()) && /0%/.test(await quizBarText()));
+
+// ไถไปข้อสุดท้ายโดยไม่ตอบอะไรเลย แถบต้องไม่ขยับสักนิด
+await navItem(unitSet.questions.length - 1).click();
+await page.waitForTimeout(400);
+check(
+  `browsing to the last question moves nothing (${await barWidth()})`,
+  (await barWidth()) === '0%',
+);
+
+// ตอบห้าข้อแรก แถบต้องขยับตามจำนวนที่ตอบ
+let pickedCount = 0;
+for (let n = 0; n < 5; n++) {
+  await navItem(n).click();
+  await page.waitForTimeout(200);
+  if (await pickChoice()) pickedCount++;
+}
+const expectedWidth = `${Math.round((pickedCount / unitSet.questions.length) * 100)}%`;
+check(
+  `answering ${pickedCount} of ${unitSet.questions.length} moves the bar to ${expectedWidth} (${await barWidth()})`,
+  (await barWidth()) === expectedWidth,
+);
+check(`the caption counts answers, not the question you are on`, (await quizBarText()).includes(`${pickedCount} จาก ${unitSet.questions.length}`));
+
+// ---------- แท็บแบบทดสอบ: เลือกวิชา → เตรียมพร้อม → ข้อสอบ ----------
+// สามหน้านี้ต้องต่อกันได้จริงด้วยการกดจริง ไม่ใช่แค่เปิดตรงๆ ทีละหน้าแล้วผ่าน
+await page.goto(`${BASE}/showcase/tech/exams`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+const examCards = page.locator('[data-theme] section ul li button');
+check(`the exam list shows one card per open exam (${await examCards.count()})`, (await examCards.count()) === openExams.length);
+const examListText = await page.locator('[data-theme]').first().innerText();
+// ต้องมีวิชาที่เปิดสอบ และต้องไม่มีวิชาประถมหลุดเข้ามา
+check(
+  'the exam list names the levels and keeps primary-school courses out',
+  /B1/.test(examListText) && /B2/.test(examListText) && /HSK/.test(examListText) && !/ป\.[1-6]/.test(examListText),
+);
+
+await examCards.filter({ hasText: 'B1 ·' }).click();
+await page.waitForTimeout(700);
+check('picking a course opens the readiness page', pathOf() === '/showcase/tech/examstart');
+const readyText = await page.locator('[data-theme]').first().innerText();
+// เข้าทางแท็บได้ข้อสอบปลายคอร์ส ไม่ใช่ท้ายบท
+const b1Exam = quizFor(b1First, COURSE_SET);
+check(
+  'the readiness page says which of the two exams this is',
+  readyText.includes('แบบทดสอบปลายคอร์ส') && !readyText.includes('แบบทดสอบท้ายบท'),
+);
+check(
+  `the readiness page states the real exam figures (${b1Exam.questions.length} items)`,
+  readyText.includes(String(b1Exam.questions.length)) && readyText.includes('60%'),
+);
+check(
+  'the readiness page warns about headphones before the exam starts',
+  /หูฟัง/.test(readyText) && /ตรวจความพร้อมของเสียง/.test(readyText),
+);
+
+// ปุ่มตรวจเสียงต้องเปลี่ยนสถานะจริง ไม่ใช่ปุ่มที่กดแล้วไม่มีอะไรเกิดขึ้น
+await page.getByRole('button', { name: /ฟังประโยคทดสอบ/ }).click();
+await page.waitForTimeout(300);
+await page.getByRole('button', { name: /ได้ยินชัดเจน/ }).click();
+await page.waitForTimeout(200);
+check('the speaker check reports a result', (await page.locator('[data-theme]').first().innerText()).includes('พร้อม'));
+
+await page.getByRole('button', { name: /เริ่มทดสอบไมโครโฟน/ }).click();
+await page.waitForTimeout(1600);
+check('the microphone check runs a real timer', await page.getByRole('button', { name: /หยุดอัด/ }).isVisible());
+await page.getByRole('button', { name: /หยุดอัด/ }).click();
+await page.waitForTimeout(300);
+check(
+  'the microphone check offers playback and says plainly that nothing was recorded',
+  (await page.getByRole('button', { name: /ฟังเสียงที่อัด/ }).isVisible()) &&
+    (await page.locator('[data-theme]').first().innerText()).includes('ยังไม่ได้บันทึกเสียงจริง'),
+);
+
+// กดเริ่มแล้วต้องได้ข้อสอบชุดเดียวกับที่หน้าเตรียมพร้อมบอกไว้
+await page.getByRole('button', { name: /เริ่มทำแบบทดสอบ/ }).click();
+await page.waitForTimeout(800);
+check(
+  'starting the exam opens the quiz with the course set',
+  pathOf() === '/showcase/tech/quiz' && page.url().includes('set=course'),
+);
+check(
+  `the exam really has ${b1Exam.questions.length} questions`,
+  (await page.locator('[data-theme] nav ol li').count()) === b1Exam.questions.length,
+);
+
+// ปุ่มท้ายเพลย์ลิสต์ต้องผ่านหน้าเตรียมพร้อมเหมือนกัน ไม่ใช่ลัดเข้าห้องสอบ
+await page.goto(`${BASE}/showcase/tech/lesson?node=${b1First.id}`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+await page.locator('[data-theme] aside button', { hasText: 'ทำแบบทดสอบ' }).click();
+await page.waitForTimeout(700);
+check(
+  'the playlist button goes through the readiness page too',
+  pathOf() === '/showcase/tech/examstart' && page.url().includes('set=unit'),
+);
+const unitReadyText = await page.locator('[data-theme]').first().innerText();
+check(
+  'the playlist route is labelled as the end-of-unit quiz, not the course exam',
+  unitReadyText.includes('แบบทดสอบท้ายบท') && unitReadyText.includes(String(unitSet.questions.length)),
+);
+await page.getByRole('button', { name: /เริ่มทำแบบทดสอบ/ }).click();
+await page.waitForTimeout(800);
+check(
+  `the playlist route really opens the ${unitSet.questions.length}-question unit quiz`,
+  (await page.locator('[data-theme] nav ol li').count()) === unitSet.questions.length,
+);
+
+// ---------- สอบปลายคอร์สผ่าน → มีทางไปหยิบวุฒิบัตร ----------
+await page.goto(`${BASE}/showcase/tech/results?node=${b1First.id}&set=course`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(800);
+const passText = await page.locator('[data-theme]').first().innerText();
+check(
+  `passing the course exam offers the certificate (${(passText.match(/\d+ \/ \d+/) ?? ['?'])[0]})`,
+  passText.includes('ดูวุฒิบัตร'),
+);
+await page.goto(`${BASE}/showcase/tech/results?node=${b1First.id}&set=unit`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+check(
+  'the end-of-unit quiz never offers a certificate',
+  !(await page.locator('[data-theme]').first().innerText()).includes('ดูวุฒิบัตร'),
+);
+
+// ---------- ประวัติการเรียน: จัดกลุ่มตามวัน ค้นหาได้ และทุกแถวกดกลับไปได้ ----------
+await page.goto(`${BASE}/showcase/tech/history`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+const histRows = page.locator('[data-theme] section ul li button');
+check(`history lists every entry (${await histRows.count()})`, (await histRows.count()) === history.length);
+const histHeads = await page.locator('[data-theme] section h2').allInnerTexts();
+check(
+  `history groups by day (${histHeads.length} groups)`,
+  histHeads.length === historyByDay().length && /วันนี้/.test(histHeads[0]) && /เมื่อวาน/.test(histHeads[1]),
+);
+
+// ค้นหาต้องกรองจริง แล้วคำที่ไม่มีต้องได้สถานะว่าง ไม่ใช่รายการเดิมทั้งชุด
+const histSearch = page.getByPlaceholder(/ค้นหาชื่อบทเรียน/);
+await histSearch.fill('คณิต');
+await page.waitForTimeout(400);
+const filtered = await histRows.count();
+check(`searching the history narrows it down (${history.length} → ${filtered})`, filtered > 0 && filtered < history.length);
+await histSearch.fill('zzzzzz');
+await page.waitForTimeout(400);
+check('a search with no match shows an empty state', (await histRows.count()) === 0);
+await histSearch.fill('');
+await page.waitForTimeout(400);
+
+// แถวประวัติต้องพากลับไปที่สื่อชิ้นนั้นจริง ไม่ใช่หน้าแรกของคอร์ส
+const firstWatch = history.find((r) => r.action === 'watch');
+await page.locator(`[data-theme] section ul li button`).nth(history.indexOf(firstWatch)).click();
+await page.waitForTimeout(700);
+check(
+  'clicking a history row opens exactly that lesson',
+  page.url().includes(`node=${firstWatch.nodeId}`) && page.url().includes('/lesson'),
+);
+
+// ---------- ใบประกาศ: วาดจริงบน canvas และโหลดออกมาเป็น PNG ได้ ----------
+await page.goto(`${BASE}/showcase/tech/certificates`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(1500);
+check(
+  `certificates page shows one card per certificate (${await page.locator(`[data-theme] canvas[role="img"]`).count()})`,
+  (await page.locator('[data-theme] canvas[role="img"]').count()) === certificates.length,
+);
+const certText = await page.locator('[data-theme]').first().innerText();
+check(
+  'each card states the pass date, the score and the credential id',
+  // คะแนนเต็มมาจากข้อมูล ไม่ใช่เลขที่พิมพ์ไว้ในเช็ค — ข้อสอบเปลี่ยนจำนวนข้อเมื่อไรตรงนี้แดงทันที
+  certificates.every((c) => certText.includes(c.credentialId) && certText.includes(`${c.score}/${c.total}`)),
+);
+
+// canvas ที่ว่างเปล่าดูเหมือนกล่องสีพื้นเป๊ะ ต้องนับสีจริงถึงจะรู้ว่าวาดหรือไม่ได้วาด
+const drawn = await page.evaluate(() => {
+  const c = document.querySelector('[data-theme] canvas[role="img"]');
+  if (!c || !c.width) return { ok: false, why: 'ไม่มี canvas หรือกว้าง 0' };
+  const px = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+  const seen = new Set();
+  for (let i = 0; i < px.length; i += 4 * 97) seen.add(`${px[i]},${px[i + 1]},${px[i + 2]},${px[i + 3]}`);
+  return { ok: seen.size > 8, colours: seen.size, opaque: px[3] === 255 };
+});
+check(`the certificate is really drawn, not an empty canvas (${drawn.colours} colours)`, drawn.ok);
+// PNG พื้นโปร่งใสจะกลายเป็นลายตารางเมื่อเปิดด้วยโปรแกรมอื่น
+check('the certificate background is opaque', drawn.opaque === true);
+
+const download = page.waitForEvent('download', { timeout: 20000 });
+await page.getByRole('button', { name: /ดาวน์โหลดใบประกาศ/ }).first().click();
+const file = await download;
+check(
+  `the download button really produces a PNG (${file.suggestedFilename()})`,
+  file.suggestedFilename() === `${certificates[0].credentialId}.png`,
+);
 
 // ---------- หน้าวิดีโอของ B1 ต้องไม่มีเอกสารแทรกในเพลย์ลิสต์ ----------
 await page.goto(`${BASE}/showcase/tech/lesson?node=${b1First.id}`, { waitUntil: 'networkidle' });

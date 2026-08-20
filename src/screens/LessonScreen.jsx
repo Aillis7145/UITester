@@ -116,7 +116,9 @@ export function LessonScreen({ onNavigate }) {
             kicker={unitKicker}
             onSelect={(n) => onNavigate?.(...targetFor(n))}
             onPractice={course.practice?.length ? () => onNavigate?.('practice', { node: content.id }) : undefined}
-            onTakeQuiz={() => onNavigate?.('quiz', { node: content.id, set: 'unit' })}
+            // ทางนี้ได้ข้อสอบ "ท้ายบท" ของบทที่กำลังดูอยู่ ไม่ใช่ข้อสอบปลายคอร์ส 50 ข้อ
+            // ยังผ่านหน้าเตรียมพร้อมเหมือนกัน เพราะข้อสอบท้ายบทก็มีข้อการฟังเช่นกัน
+            onTakeQuiz={() => onNavigate?.('examstart', { node: content.id, set: 'unit' })}
           />
         </aside>
       </div>
